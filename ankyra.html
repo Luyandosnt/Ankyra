@@ -1,0 +1,1010 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ANKYRA</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --surface2: #1c1c27;
+    --border: #2a2a3a;
+    --accent: #f5c842;
+    --accent2: #ff6b35;
+    --accent3: #4ecdc4;
+    --text: #e8e8f0;
+    --muted: #6b6b85;
+    --success: #4ecdc4;
+    --partial: #f5c842;
+    --missed: #ff6b35;
+    --geco: #a78bfa;
+    --qs: #fb923c;
+    --health: #4ade80;
+    --learning: #60a5fa;
+    --wildcard: #f472b6;
+    --review: #94a3b8;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    opacity: 0.4;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .app { position: relative; z-index: 1; max-width: 430px; margin: 0 auto; padding: 0 0 100px; }
+
+  /* ── AUTH SCREEN ── */
+  #auth-screen {
+    position: fixed; inset: 0; z-index: 200;
+    background: var(--bg);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 40px 28px; text-align: center;
+  }
+  #auth-screen .logo-big {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 4rem; letter-spacing: 0.1em;
+    color: var(--accent); line-height: 1; margin-bottom: 6px;
+  }
+  #auth-screen .tagline-big {
+    font-size: 0.72rem; letter-spacing: 0.2em;
+    text-transform: uppercase; color: var(--muted); margin-bottom: 40px;
+  }
+  .auth-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 28px 24px;
+    width: 100%; max-width: 320px;
+  }
+  .auth-title { font-size: 1rem; font-weight: 600; margin-bottom: 6px; }
+  .auth-sub { font-size: 0.78rem; color: var(--muted); margin-bottom: 24px; line-height: 1.5; }
+  .google-btn {
+    width: 100%;
+    background: #fff;
+    color: #1a1a2e;
+    border: none;
+    border-radius: 12px;
+    padding: 14px 20px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    transition: opacity 0.2s, transform 0.15s;
+    margin-bottom: 12px;
+  }
+  .google-btn:active { transform: scale(0.97); opacity: 0.9; }
+  .google-btn svg { width: 18px; height: 18px; flex-shrink: 0; }
+  .config-note {
+    font-size: 0.68rem; color: var(--muted);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 14px;
+    line-height: 1.5; margin-top: 16px; text-align: left;
+  }
+  .config-note strong { color: var(--accent); }
+
+  /* ── CONFIG NEEDED SCREEN ── */
+  #config-screen {
+    position: fixed; inset: 0; z-index: 200;
+    background: var(--bg);
+    display: none; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 40px 24px;
+  }
+  .config-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 28px 24px;
+    width: 100%; max-width: 380px;
+  }
+  .config-card h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.4rem; letter-spacing: 0.06em;
+    color: var(--accent); margin-bottom: 8px;
+  }
+  .config-card p { font-size: 0.8rem; color: var(--muted); line-height: 1.6; margin-bottom: 16px; }
+  .config-card ol { padding-left: 18px; }
+  .config-card li { font-size: 0.78rem; color: var(--muted); line-height: 1.8; }
+  .config-card li strong { color: var(--text); }
+  .config-card a { color: var(--accent); text-decoration: none; }
+  .step-badge {
+    display: inline-block;
+    background: var(--accent);
+    color: #000;
+    border-radius: 50%;
+    width: 18px; height: 18px;
+    font-size: 0.65rem; font-weight: 700;
+    text-align: center; line-height: 18px;
+    margin-right: 6px;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    padding: 28px 20px 20px;
+    display: flex; align-items: flex-end; justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+  }
+  .logo { font-family: 'Bebas Neue', sans-serif; font-size: 2.2rem; letter-spacing: 0.08em; color: var(--accent); line-height: 1; }
+  .tagline { font-size: 0.7rem; color: var(--muted); letter-spacing: 0.15em; text-transform: uppercase; margin-top: 2px; }
+  .header-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+  .date-badge {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 6px 12px;
+    font-family: 'DM Mono', monospace; font-size: 0.72rem;
+    color: var(--muted); text-align: right;
+  }
+  .date-badge span { display: block; color: var(--text); font-size: 0.85rem; font-weight: 500; }
+  .user-row {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 0.7rem; color: var(--muted);
+  }
+  .user-avatar {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: var(--surface2); border: 1px solid var(--border);
+    overflow: hidden; display: flex; align-items: center; justify-content: center;
+    font-size: 0.65rem; color: var(--accent);
+  }
+  .user-avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .signout-btn {
+    background: none; border: none; color: var(--muted);
+    font-size: 0.65rem; cursor: pointer; text-decoration: underline;
+  }
+
+  /* ── SYNC INDICATOR ── */
+  .sync-bar {
+    padding: 6px 20px;
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    display: flex; align-items: center; gap: 6px;
+    border-bottom: 1px solid var(--border);
+    min-height: 30px;
+  }
+  .sync-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--muted); flex-shrink: 0;
+    transition: background 0.3s;
+  }
+  .sync-dot.syncing { background: var(--partial); animation: pulse 1s infinite; }
+  .sync-dot.synced { background: var(--success); }
+  .sync-dot.error { background: var(--missed); }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  .sync-label { color: var(--muted); }
+
+  /* ── TABS ── */
+  .tab-nav {
+    display: flex; padding: 16px 20px 0; gap: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+  .tab-btn {
+    flex: 1; background: none; border: none;
+    color: var(--muted); font-family: 'DM Sans', sans-serif;
+    font-size: 0.72rem; font-weight: 500;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    padding: 8px 4px 12px; cursor: pointer;
+    border-bottom: 2px solid transparent; transition: all 0.2s;
+  }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* ── VIEWS ── */
+  .view { display: none; padding: 20px; }
+  .view.active { display: block; }
+
+  /* ── TODAY ── */
+  .today-anchor {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; padding: 20px; margin-bottom: 20px;
+    position: relative; overflow: hidden;
+  }
+  .today-anchor::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0;
+    height: 3px; background: var(--day-color, var(--accent));
+  }
+  .anchor-label { font-size: 0.65rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+  .anchor-day { font-family: 'Bebas Neue', sans-serif; font-size: 2rem; letter-spacing: 0.05em; color: var(--day-color, var(--accent)); line-height: 1; }
+  .anchor-title { font-size: 1rem; font-weight: 600; margin: 4px 0 8px; color: var(--text); }
+  .anchor-desc { font-size: 0.8rem; color: var(--muted); line-height: 1.5; margin-bottom: 16px; }
+  .anchor-status-row { display: flex; gap: 8px; }
+  .status-btn {
+    flex: 1; border: 1px solid var(--border); background: var(--surface2);
+    border-radius: 10px; padding: 10px 6px;
+    font-family: 'DM Sans', sans-serif; font-size: 0.75rem; font-weight: 500;
+    color: var(--muted); cursor: pointer; text-align: center;
+    transition: all 0.2s; display: flex; flex-direction: column; align-items: center; gap: 4px;
+  }
+  .status-btn .icon { font-size: 1.2rem; }
+  .status-btn.selected-done { background: rgba(78,205,196,0.15); border-color: var(--success); color: var(--success); }
+  .status-btn.selected-partial { background: rgba(245,200,66,0.15); border-color: var(--partial); color: var(--partial); }
+  .status-btn.selected-missed { background: rgba(255,107,53,0.15); border-color: var(--missed); color: var(--missed); }
+
+  .zone-block {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; padding: 16px; margin-bottom: 12px;
+  }
+  .zone-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .zone-icon { font-size: 1.1rem; }
+  .zone-name { font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  .zone-time { margin-left: auto; font-family: 'DM Mono', monospace; font-size: 0.68rem; color: var(--muted); background: var(--surface2); padding: 3px 8px; border-radius: 6px; }
+  .task-input-row { display: flex; gap: 8px; align-items: center; }
+  .task-input {
+    flex: 1; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 10px 12px;
+    font-family: 'DM Sans', sans-serif; font-size: 0.82rem; color: var(--text);
+    outline: none; transition: border-color 0.2s;
+  }
+  .task-input::placeholder { color: var(--muted); }
+  .task-input:focus { border-color: var(--accent); }
+  .add-btn {
+    background: var(--accent); border: none; border-radius: 10px;
+    width: 38px; height: 38px; font-size: 1.2rem; cursor: pointer;
+    color: #000; font-weight: bold; display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; transition: transform 0.15s;
+  }
+  .add-btn:active { transform: scale(0.9); }
+  .task-list { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+  .task-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 10px; background: var(--surface2); border-radius: 8px; font-size: 0.82rem;
+  }
+  .task-check {
+    width: 18px; height: 18px; border: 2px solid var(--border); border-radius: 5px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; transition: all 0.2s; font-size: 0.7rem; color: transparent;
+  }
+  .task-item.done .task-check { background: var(--success); border-color: var(--success); color: #000; }
+  .task-item.done .task-text { text-decoration: line-through; color: var(--muted); }
+  .task-text { flex: 1; }
+  .task-del { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 0.9rem; padding: 2px; }
+
+  .capture-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .capture-count { background: var(--accent2); color: #fff; border-radius: 20px; padding: 2px 8px; font-size: 0.65rem; font-weight: 600; }
+  .captured-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 10px;
+    background: rgba(255,107,53,0.08); border: 1px solid rgba(255,107,53,0.2);
+    border-radius: 8px; font-size: 0.82rem; margin-bottom: 6px;
+  }
+  .move-btn { background: none; border: 1px solid var(--border); border-radius: 6px; padding: 3px 7px; font-size: 0.62rem; color: var(--muted); cursor: pointer; }
+
+  /* ── WEEK ── */
+  .week-grid { display: flex; flex-direction: column; gap: 8px; }
+  .week-row {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; padding: 14px 16px;
+    display: flex; align-items: center; gap: 14px;
+    position: relative; overflow: hidden;
+  }
+  .week-row::before {
+    content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+    width: 3px; background: var(--day-color, var(--muted)); border-radius: 0 2px 2px 0;
+  }
+  .week-row.today-row { border-color: var(--accent); }
+  .week-day-name { font-family: 'Bebas Neue', sans-serif; font-size: 1.1rem; letter-spacing: 0.06em; color: var(--day-color, var(--muted)); width: 30px; flex-shrink: 0; }
+  .week-domain { flex: 1; }
+  .week-domain-name { font-size: 0.85rem; font-weight: 600; color: var(--text); }
+  .week-domain-sub { font-size: 0.7rem; color: var(--muted); margin-top: 1px; }
+  .week-status-btns { display: flex; gap: 6px; }
+  .mini-status {
+    width: 32px; height: 32px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--surface2);
+    font-size: 0.9rem; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; transition: all 0.15s;
+  }
+  .mini-status.sel-done { background: rgba(78,205,196,0.15); border-color: var(--success); }
+  .mini-status.sel-partial { background: rgba(245,200,66,0.15); border-color: var(--partial); }
+  .mini-status.sel-missed { background: rgba(255,107,53,0.15); border-color: var(--missed); }
+
+  /* ── REVIEW ── */
+  .streak-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+  .streak-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px; text-align: center; }
+  .streak-num { font-family: 'Bebas Neue', sans-serif; font-size: 2.4rem; line-height: 1; color: var(--accent); }
+  .streak-label { font-size: 0.68rem; color: var(--muted); margin-top: 2px; }
+  .domain-bars { display: flex; flex-direction: column; gap: 10px; }
+  .domain-bar-row { display: flex; flex-direction: column; gap: 4px; }
+  .domain-bar-header { display: flex; justify-content: space-between; align-items: center; }
+  .domain-bar-name { font-size: 0.78rem; font-weight: 500; }
+  .domain-bar-pct { font-family: 'DM Mono', monospace; font-size: 0.72rem; color: var(--muted); }
+  .domain-bar-track { height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+  .domain-bar-fill { height: 100%; border-radius: 3px; transition: width 0.6s cubic-bezier(0.16,1,0.3,1); }
+  .review-q { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px; margin-bottom: 10px; }
+  .review-q-text { font-size: 0.78rem; font-weight: 600; margin-bottom: 8px; color: var(--text); }
+  .review-textarea {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 10px 12px;
+    font-family: 'DM Sans', sans-serif; font-size: 0.82rem; color: var(--text);
+    resize: none; outline: none; min-height: 70px; transition: border-color 0.2s;
+  }
+  .review-textarea:focus { border-color: var(--accent); }
+  .week-history { display: flex; gap: 6px; margin-bottom: 20px; flex-wrap: wrap; }
+  .hist-dot {
+    width: 36px; height: 36px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.65rem; font-weight: 600; font-family: 'DM Mono', monospace;
+    background: var(--surface2); color: var(--muted); border: 1px solid var(--border);
+  }
+  .hist-dot.done { background: rgba(78,205,196,0.15); border-color: var(--success); color: var(--success); }
+  .hist-dot.partial { background: rgba(245,200,66,0.15); border-color: var(--partial); color: var(--partial); }
+  .hist-dot.missed { background: rgba(255,107,53,0.15); border-color: var(--missed); color: var(--missed); }
+  .save-btn {
+    width: 100%; background: var(--accent); color: #000; border: none;
+    border-radius: 12px; padding: 14px;
+    font-family: 'Bebas Neue', sans-serif; font-size: 1rem; letter-spacing: 0.12em;
+    cursor: pointer; transition: opacity 0.2s, transform 0.15s;
+  }
+  .save-btn:active { transform: scale(0.98); opacity: 0.9; }
+
+  /* ── BOTTOM NAV ── */
+  .bottom-nav {
+    position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+    width: 100%; max-width: 430px;
+    background: var(--surface); border-top: 1px solid var(--border);
+    display: flex; padding: 8px 0 20px; z-index: 100;
+  }
+  .nav-btn {
+    flex: 1; background: none; border: none;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    padding: 8px 0; cursor: pointer; color: var(--muted);
+    font-family: 'DM Sans', sans-serif; font-size: 0.6rem;
+    letter-spacing: 0.08em; text-transform: uppercase; transition: color 0.2s;
+  }
+  .nav-btn .nav-icon { font-size: 1.3rem; }
+  .nav-btn.active { color: var(--accent); }
+
+  .section-title {
+    font-family: 'Bebas Neue', sans-serif; font-size: 1.1rem; letter-spacing: 0.08em;
+    color: var(--muted); margin-bottom: 12px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  .toast {
+    position: fixed; bottom: 100px; left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--accent); color: #000;
+    padding: 10px 20px; border-radius: 30px;
+    font-size: 0.8rem; font-weight: 600;
+    opacity: 0; transition: all 0.3s; z-index: 999; white-space: nowrap;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast.error-toast { background: var(--missed); color: #fff; }
+
+  .loading-overlay {
+    position: fixed; inset: 0; z-index: 150;
+    background: var(--bg);
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 16px;
+  }
+  .loading-logo { font-family: 'Bebas Neue', sans-serif; font-size: 3rem; color: var(--accent); letter-spacing: 0.1em; }
+  .loading-dots { display: flex; gap: 6px; }
+  .loading-dots span {
+    width: 8px; height: 8px; border-radius: 50%; background: var(--accent);
+    animation: bounce 1.2s infinite ease-in-out;
+  }
+  .loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes bounce { 0%,80%,100%{transform:scale(0.6);opacity:0.4} 40%{transform:scale(1);opacity:1} }
+</style>
+</head>
+<body>
+
+<!-- Loading -->
+<div class="loading-overlay" id="loading-overlay">
+  <div class="loading-logo">ANKYRA</div>
+  <div class="loading-dots"><span></span><span></span><span></span></div>
+</div>
+
+<!-- Config needed screen -->
+<div id="config-screen" style="display:none;position:fixed;inset:0;z-index:200;background:var(--bg);overflow-y:auto;padding:40px 20px;">
+  <div class="config-card" style="margin:0 auto;max-width:400px;">
+    <h2>⚙️ Setup Required</h2>
+    <p>This app needs a Firebase project to sync your data across devices. It takes about 5 minutes.</p>
+    <ol style="list-style:none;padding:0;">
+      <li style="margin-bottom:12px;"><span class="step-badge">1</span>Go to <a href="https://console.firebase.google.com" target="_blank">console.firebase.google.com</a> and create a new project (name it <strong>anchor-tracker</strong>)</li>
+      <li style="margin-bottom:12px;"><span class="step-badge">2</span>In the project, click <strong>Firestore Database</strong> → Create database → Start in <strong>test mode</strong></li>
+      <li style="margin-bottom:12px;"><span class="step-badge">3</span>Go to <strong>Authentication</strong> → Sign-in method → Enable <strong>Google</strong></li>
+      <li style="margin-bottom:12px;"><span class="step-badge">4</span>Go to <strong>Project Settings</strong> (gear icon) → Your apps → Add web app → Copy your <strong>firebaseConfig</strong></li>
+      <li style="margin-bottom:12px;"><span class="step-badge">5</span>Open <strong>index.html</strong> in a code editor, find the <code style="color:var(--accent);font-size:0.75rem;">FIREBASE_CONFIG_HERE</code> section and replace it with your config</li>
+      <li style="margin-bottom:12px;"><span class="step-badge">6</span>In Firebase Auth → Settings → Authorised domains → add your <strong>GitHub Pages domain</strong> (e.g. <code style="color:var(--accent);font-size:0.75rem;">yourusername.github.io</code>)</li>
+      <li><span class="step-badge">7</span>Push to GitHub Pages and open the live URL</li>
+    </ol>
+    <div style="margin-top:16px;padding:12px;background:var(--surface2);border-radius:10px;border:1px solid var(--border);">
+      <p style="font-size:0.72rem;color:var(--muted);margin:0;">💡 Full step-by-step instructions are also in the <strong style="color:var(--text);">README.md</strong> file in your repo.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Auth screen -->
+<div id="auth-screen">
+  <div class="logo-big">ANKYRA</div>
+  <div class="tagline-big">Commitment Initializer And Monitor</div>
+  <div class="auth-card">
+    <div class="auth-title">Sign in to sync</div>
+    <div class="auth-sub">Your data syncs across all your devices automatically.</div>
+    <button class="google-btn" onclick="signInWithGoogle()">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+      </svg>
+      Continue with Google
+    </button>
+    <div class="config-note">
+      <strong>First time?</strong> You'll need to add your Firebase config to this file. See <strong>README.md</strong> for the full setup guide — it takes about 5 minutes.
+    </div>
+  </div>
+</div>
+
+<!-- Main App -->
+<div class="app" id="main-app" style="display:none;">
+  <div class="header">
+    <div>
+      <div class="logo">ANKYRA</div>
+      <div class="tagline">Commitment Initializer And Monitor</div>
+    </div>
+    <div class="header-right">
+      <div class="date-badge">
+        <div id="date-label">Loading…</div>
+        <span id="week-label"></span>
+      </div>
+      <div class="user-row">
+        <div class="user-avatar" id="user-avatar">?</div>
+        <span id="user-name">…</span>
+        <button class="signout-btn" onclick="signOut()">sign out</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="sync-bar">
+    <div class="sync-dot" id="sync-dot"></div>
+    <span class="sync-label" id="sync-label">Connecting…</span>
+  </div>
+
+  <div class="tab-nav">
+    <button class="tab-btn active" onclick="showView('today', this)">Today</button>
+    <button class="tab-btn" onclick="showView('week', this)">Week</button>
+    <button class="tab-btn" onclick="showView('review', this)">Review</button>
+  </div>
+
+  <!-- TODAY -->
+  <div id="view-today" class="view active">
+    <div class="today-anchor" id="anchor-card">
+      <div class="anchor-label">⚓ Today's Anchor Block · 90 mins</div>
+      <div class="anchor-day" id="anchor-day-name">MONDAY</div>
+      <div class="anchor-title" id="anchor-title">GECO — Production</div>
+      <div class="anchor-desc" id="anchor-desc">Loading…</div>
+      <div class="anchor-status-row">
+        <button class="status-btn" id="btn-done" onclick="setAnchorStatus('done')"><span class="icon">✅</span>Completed</button>
+        <button class="status-btn" id="btn-partial" onclick="setAnchorStatus('partial')"><span class="icon">⚡</span>Partial</button>
+        <button class="status-btn" id="btn-missed" onclick="setAnchorStatus('missed')"><span class="icon">❌</span>Missed</button>
+      </div>
+    </div>
+
+    <div class="zone-block">
+      <div class="zone-header">
+        <span class="zone-icon">☀️</span>
+        <span class="zone-name">Flex Zone</span>
+        <span class="zone-time">Mid-morning → Afternoon</span>
+      </div>
+      <div class="task-input-row">
+        <input class="task-input" id="flex-input" placeholder="Add task or reactive item…" onkeydown="handleEnter(event,'flex')">
+        <button class="add-btn" onclick="addTask('flex')">+</button>
+      </div>
+      <div class="task-list" id="flex-tasks"></div>
+    </div>
+
+    <div class="zone-block">
+      <div class="capture-header">
+        <div class="zone-header" style="margin:0">
+          <span class="zone-icon">📝</span>
+          <span class="zone-name">Capture List</span>
+        </div>
+        <span class="capture-count" id="capture-count">0 items</span>
+      </div>
+      <p style="font-size:0.72rem;color:var(--muted);margin-bottom:10px;">Distracted? Write it here, keep working.</p>
+      <div class="task-input-row">
+        <input class="task-input" id="capture-input" placeholder="Capture the distraction…" onkeydown="if(event.key==='Enter')addCapture()">
+        <button class="add-btn" onclick="addCapture()" style="background:var(--accent2)">+</button>
+      </div>
+      <div id="capture-list" style="margin-top:10px;"></div>
+    </div>
+
+    <div class="zone-block">
+      <div class="zone-header">
+        <span class="zone-icon">🌆</span>
+        <span class="zone-name">Wind-Down</span>
+        <span class="zone-time">Late Afternoon</span>
+      </div>
+      <div class="task-input-row">
+        <input class="task-input" id="wind-input" placeholder="Tomorrow's most important task…" onkeydown="handleEnter(event,'wind')">
+        <button class="add-btn" onclick="addTask('wind')" style="background:var(--accent3)">+</button>
+      </div>
+      <div class="task-list" id="wind-tasks"></div>
+    </div>
+
+    <div class="zone-block">
+      <div class="zone-header">
+        <span class="zone-icon">🌙</span>
+        <span class="zone-name">Learning</span>
+        <span class="zone-time">Evening · 45–60 mins</span>
+      </div>
+      <div class="task-input-row">
+        <input class="task-input" id="learn-input" placeholder="What are you studying tonight?" onkeydown="handleEnter(event,'learn')">
+        <button class="add-btn" onclick="addTask('learn')" style="background:var(--learning)">+</button>
+      </div>
+      <div class="task-list" id="learn-tasks"></div>
+    </div>
+  </div>
+
+  <!-- WEEK -->
+  <div id="view-week" class="view">
+    <div class="section-title">This Week</div>
+    <div class="week-grid" id="week-grid"></div>
+  </div>
+
+  <!-- REVIEW -->
+  <div id="view-review" class="view">
+    <div class="streak-row">
+      <div class="streak-card"><div class="streak-num" id="streak-num">—</div><div class="streak-label">Day Streak</div></div>
+      <div class="streak-card"><div class="streak-num" id="completion-rate">—</div><div class="streak-label">Completion Rate</div></div>
+    </div>
+    <div class="section-title">Domain Performance</div>
+    <div class="domain-bars" id="domain-bars"></div>
+    <div class="section-title" style="margin-top:20px;">Week History</div>
+    <div class="week-history" id="week-history"></div>
+    <div class="section-title" style="margin-top:4px;">Sunday Review</div>
+    <div class="review-q"><div class="review-q-text">1. What moved forward this week?</div><textarea class="review-textarea" id="review-q1" placeholder="GECO: …  Construction: …  Health: …  Learning: …"></textarea></div>
+    <div class="review-q"><div class="review-q-text">2. What kept stalling?</div><textarea class="review-textarea" id="review-q2" placeholder="Usually one thing…"></textarea></div>
+    <div class="review-q"><div class="review-q-text">3. Most important outcome per domain next week?</div><textarea class="review-textarea" id="review-q3" placeholder="GECO: …  Construction: …  Health: …  Learning: …"></textarea></div>
+    <div class="review-q"><div class="review-q-text">4. Does the anchor rotation still feel right?</div><textarea class="review-textarea" id="review-q4" placeholder="Any domain needing more days?"></textarea></div>
+    <button class="save-btn" onclick="saveReview()">SAVE REVIEW</button>
+  </div>
+</div>
+
+<div class="bottom-nav" id="bottom-nav" style="display:none;">
+  <button class="nav-btn active" id="nav-today" onclick="showView('today',null,'nav-today')"><span class="nav-icon">⚓</span>Today</button>
+  <button class="nav-btn" id="nav-week" onclick="showView('week',null,'nav-week')"><span class="nav-icon">📅</span>Week</button>
+  <button class="nav-btn" id="nav-review" onclick="showView('review',null,'nav-review')"><span class="nav-icon">📊</span>Review</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- ═══════════════════════════════════════════════
+     FIREBASE CONFIG
+     Replace the object below with YOUR firebaseConfig
+     from Firebase Console → Project Settings → Your apps
+     ═══════════════════════════════════════════════ -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut as fbSignOut }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, doc, getDoc, setDoc, onSnapshot, collection, query, where, getDocs }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+// ─────────────────────────────────────────────────
+// 🔧 REPLACE THIS WITH YOUR FIREBASE CONFIG
+// ─────────────────────────────────────────────────
+const firebaseConfig = {
+  apiKey: "REPLACE_WITH_YOUR_API_KEY",
+  authDomain: "REPLACE_WITH_YOUR_AUTH_DOMAIN",
+  projectId: "REPLACE_WITH_YOUR_PROJECT_ID",
+  storageBucket: "REPLACE_WITH_YOUR_STORAGE_BUCKET",
+  messagingSenderId: "REPLACE_WITH_YOUR_MESSAGING_SENDER_ID",
+  appId: "REPLACE_WITH_YOUR_APP_ID"
+};
+// ─────────────────────────────────────────────────
+
+const CONFIG_FILLED = !firebaseConfig.apiKey.includes("REPLACE");
+
+const DAYS = [
+  { name:'SUN', full:'SUNDAY',    domain:'Weekly Review',      sub:'Plan ahead. Review wins and stalls.',              color:'var(--review)',   icon:'🔄' },
+  { name:'MON', full:'MONDAY',    domain:'GECO — Production',  sub:'Wacky Ancestors / Jam Pass production work.',      color:'var(--geco)',     icon:'🎮' },
+  { name:'TUE', full:'TUESDAY',   domain:'Construction / QS',  sub:'Tender prep, BOQ pricing, RFQ work.',              color:'var(--qs)',       icon:'🏗️' },
+  { name:'WED', full:'WEDNESDAY', domain:'GECO — Strategy',    sub:'Documentation, funding, pitch, partnerships.',     color:'var(--geco)',     icon:'🎮' },
+  { name:'THU', full:'THURSDAY',  domain:'Construction / QS',  sub:'Compliance review, pricing checks, follow-ups.',   color:'var(--qs)',       icon:'🏗️' },
+  { name:'FRI', full:'FRIDAY',    domain:'Health & Fitness',   sub:'Movement, meal prep, body audit.',                 color:'var(--health)',   icon:'💪' },
+  { name:'SAT', full:'SATURDAY',  domain:'Wildcard',           sub:'Most urgent task across all domains.',             color:'var(--wildcard)', icon:'⚡' },
+];
+
+const DOMAIN_COLORS = {
+  'GECO — Production':'var(--geco)', 'GECO — Strategy':'var(--geco)',
+  'Construction / QS':'var(--qs)',   'Health & Fitness':'var(--health)',
+  'Wildcard':'var(--wildcard)',       'Weekly Review':'var(--review)',
+};
+
+let app, auth, db, currentUser, unsubscribe;
+let localCache = {};
+let syncTimeout = null;
+
+function dateKey(offset=0) {
+  const d = new Date(); d.setDate(d.getDate()+offset);
+  return d.toISOString().split('T')[0];
+}
+
+function getWeekKeys() {
+  const today = new Date();
+  const dow = today.getDay();
+  const mondayOffset = dow===0 ? -6 : 1-dow;
+  return Array.from({length:7},(_,i)=>{
+    const d = new Date(today); d.setDate(d.getDate()+mondayOffset+i);
+    return { key:d.toISOString().split('T')[0], dayIdx:d.getDay() };
+  });
+}
+
+// ── FIREBASE INIT ──────────────────────────────────
+function initFirebase() {
+  if (!CONFIG_FILLED) {
+    document.getElementById('loading-overlay').style.display = 'none';
+    document.getElementById('config-screen').style.display = 'flex';
+    return;
+  }
+  try {
+    app = initializeApp(firebaseConfig);
+    auth = getAuth(app);
+    db = getFirestore(app);
+    onAuthStateChanged(auth, handleAuthChange);
+  } catch(e) {
+    document.getElementById('loading-overlay').style.display = 'none';
+    document.getElementById('config-screen').style.display = 'flex';
+  }
+}
+
+function handleAuthChange(user) {
+  document.getElementById('loading-overlay').style.display = 'none';
+  if (user) {
+    currentUser = user;
+    document.getElementById('auth-screen').style.display = 'none';
+    document.getElementById('main-app').style.display = 'block';
+    document.getElementById('bottom-nav').style.display = 'flex';
+    document.getElementById('user-name').textContent = user.displayName?.split(' ')[0] || 'You';
+    const avatar = document.getElementById('user-avatar');
+    if (user.photoURL) avatar.innerHTML = `<img src="${user.photoURL}">`;
+    else avatar.textContent = (user.displayName||'?')[0].toUpperCase();
+    initApp();
+  } else {
+    currentUser = null;
+    document.getElementById('auth-screen').style.display = 'flex';
+    document.getElementById('main-app').style.display = 'none';
+    document.getElementById('bottom-nav').style.display = 'none';
+  }
+}
+
+window.signInWithGoogle = async function() {
+  const provider = new GoogleAuthProvider();
+  try { await signInWithPopup(auth, provider); }
+  catch(e) { showToast('Sign in failed: '+e.message, true); }
+};
+
+window.signOut = async function() {
+  if (unsubscribe) unsubscribe();
+  await fbSignOut(auth);
+};
+
+// ── FIRESTORE ─────────────────────────────────────
+function userDoc(dateK) {
+  return doc(db, 'users', currentUser.uid, 'days', dateK);
+}
+
+function setSyncState(state) {
+  const dot = document.getElementById('sync-dot');
+  const label = document.getElementById('sync-label');
+  dot.className = 'sync-dot ' + state;
+  const msgs = { syncing:'Syncing…', synced:'Synced', error:'Sync error — check connection' };
+  label.textContent = msgs[state] || '';
+}
+
+async function loadDay(dateK) {
+  if (localCache[dateK]) return localCache[dateK];
+  try {
+    const snap = await getDoc(userDoc(dateK));
+    const data = snap.exists() ? snap.data() : defaultDay();
+    localCache[dateK] = data;
+    return data;
+  } catch(e) {
+    return localCache[dateK] || defaultDay();
+  }
+}
+
+async function saveDay(dateK, data) {
+  localCache[dateK] = data;
+  setSyncState('syncing');
+  clearTimeout(syncTimeout);
+  syncTimeout = setTimeout(async () => {
+    try {
+      await setDoc(userDoc(dateK), data);
+      setSyncState('synced');
+    } catch(e) {
+      setSyncState('error');
+      showToast('Sync failed — will retry', true);
+    }
+  }, 800);
+}
+
+function defaultDay() {
+  return { anchorStatus: null, tasks: { flex:[], wind:[], learn:[] }, captures: [] };
+}
+
+// ── APP INIT ──────────────────────────────────────
+async function initApp() {
+  const today = new Date();
+  const todayIdx = today.getDay();
+  const d = DAYS[todayIdx];
+  const card = document.getElementById('anchor-card');
+  card.style.setProperty('--day-color', d.color);
+  document.getElementById('anchor-day-name').textContent = d.full;
+  document.getElementById('anchor-title').textContent = d.domain;
+  document.getElementById('anchor-desc').textContent = d.sub + ' Phone face-down. Capture list ready.';
+
+  const opts = {weekday:'short', month:'short', day:'numeric'};
+  document.getElementById('date-label').textContent = today.toLocaleDateString('en-GB', opts);
+  const wk = getWeekKeys();
+  const mondayDate = new Date(today);
+  mondayDate.setDate(today.getDate()+(today.getDay()===0?-6:1-today.getDay()));
+  document.getElementById('week-label').textContent = 'Wk '+mondayDate.toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+
+  const ds = await loadDay(dateKey());
+  setSyncState('synced');
+
+  if (ds.anchorStatus) applyAnchorStatus(ds.anchorStatus);
+  ['flex','wind','learn'].forEach(z => renderTasks(z, ds));
+  renderCaptures(ds);
+}
+
+// ── ANCHOR STATUS ─────────────────────────────────
+window.setAnchorStatus = async function(status) {
+  const dk = dateKey();
+  const ds = await loadDay(dk);
+  ds.anchorStatus = status;
+  await saveDay(dk, ds);
+  applyAnchorStatus(status);
+  const msgs = { done:'⚓ Anchor locked in!', partial:'⚡ Partial counts. Push tomorrow.', missed:"❌ Logged. Tomorrow's anchor matters." };
+  showToast(msgs[status]);
+};
+
+function applyAnchorStatus(status) {
+  ['done','partial','missed'].forEach(s => document.getElementById('btn-'+s).classList.remove('selected-'+s));
+  if (status) document.getElementById('btn-'+status).classList.add('selected-'+status);
+}
+
+// ── TASKS ─────────────────────────────────────────
+window.handleEnter = function(e, zone) { if(e.key==='Enter') addTask(zone); };
+
+window.addTask = async function(zone) {
+  const input = document.getElementById(zone+'-input');
+  const val = input.value.trim();
+  if(!val) return;
+  const dk = dateKey();
+  const ds = await loadDay(dk);
+  if(!ds.tasks[zone]) ds.tasks[zone]=[];
+  ds.tasks[zone].push({text:val, done:false, id:Date.now()});
+  input.value = '';
+  await saveDay(dk, ds);
+  renderTasks(zone, ds);
+};
+
+window.toggleTask = async function(zone, id) {
+  const dk = dateKey();
+  const ds = await loadDay(dk);
+  const t = ds.tasks[zone].find(t=>t.id===id);
+  if(t) t.done = !t.done;
+  await saveDay(dk, ds);
+  renderTasks(zone, ds);
+};
+
+window.deleteTask = async function(zone, id) {
+  const dk = dateKey();
+  const ds = await loadDay(dk);
+  ds.tasks[zone] = ds.tasks[zone].filter(t=>t.id!==id);
+  await saveDay(dk, ds);
+  renderTasks(zone, ds);
+};
+
+function renderTasks(zone, ds) {
+  const tasks = ds?.tasks?.[zone] || [];
+  document.getElementById(zone+'-tasks').innerHTML = tasks.map(t=>`
+    <div class="task-item ${t.done?'done':''}" onclick="toggleTask('${zone}',${t.id})">
+      <div class="task-check">${t.done?'✓':''}</div>
+      <div class="task-text">${escHtml(t.text)}</div>
+      <button class="task-del" onclick="event.stopPropagation();deleteTask('${zone}',${t.id})">✕</button>
+    </div>`).join('');
+}
+
+// ── CAPTURES ──────────────────────────────────────
+window.addCapture = async function() {
+  const input = document.getElementById('capture-input');
+  const val = input.value.trim();
+  if(!val) return;
+  const dk = dateKey();
+  const ds = await loadDay(dk);
+  if(!ds.captures) ds.captures=[];
+  ds.captures.push({text:val, id:Date.now()});
+  input.value = '';
+  await saveDay(dk, ds);
+  renderCaptures(ds);
+  showToast('📝 Captured. Back to work!');
+};
+
+window.moveToFlex = async function(id) {
+  const dk = dateKey();
+  const ds = await loadDay(dk);
+  const item = ds.captures.find(c=>c.id===id);
+  if(item) {
+    ds.tasks.flex.push({text:item.text, done:false, id:Date.now()});
+    ds.captures = ds.captures.filter(c=>c.id!==id);
+    await saveDay(dk, ds);
+    renderCaptures(ds);
+    renderTasks('flex', ds);
+    showToast('Moved to Flex Zone ✓');
+  }
+};
+
+window.deleteCapture = async function(id) {
+  const dk = dateKey();
+  const ds = await loadDay(dk);
+  ds.captures = ds.captures.filter(c=>c.id!==id);
+  await saveDay(dk, ds);
+  renderCaptures(ds);
+};
+
+function renderCaptures(ds) {
+  const items = ds?.captures || [];
+  document.getElementById('capture-count').textContent = items.length+' item'+(items.length!==1?'s':'');
+  document.getElementById('capture-list').innerHTML = items.map(c=>`
+    <div class="captured-item">
+      <div style="flex:1;font-size:0.82rem">${escHtml(c.text)}</div>
+      <button class="move-btn" onclick="moveToFlex(${c.id})">→ Flex</button>
+      <button class="task-del" onclick="deleteCapture(${c.id})" style="margin-left:4px">✕</button>
+    </div>`).join('');
+}
+
+// ── WEEK VIEW ─────────────────────────────────────
+window.showView = async function(id, tabBtn, navId) {
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+id).classList.add('active');
+  if(tabBtn){ document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active')); tabBtn.classList.add('active'); }
+  if(navId){ document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active')); document.getElementById(navId).classList.add('active'); }
+  if(id==='week') await renderWeek();
+  if(id==='review') await renderReview();
+};
+
+async function renderWeek() {
+  const weekKeys = getWeekKeys();
+  const todayK = dateKey();
+  const grid = document.getElementById('week-grid');
+  grid.innerHTML = '<div style="color:var(--muted);font-size:0.8rem;padding:8px 0;">Loading…</div>';
+  const dayData = await Promise.all(weekKeys.map(({key})=>loadDay(key)));
+  grid.innerHTML = weekKeys.map(({key,dayIdx},i)=>{
+    const d = DAYS[dayIdx];
+    const status = dayData[i]?.anchorStatus || null;
+    const isToday = key===todayK;
+    return `
+      <div class="week-row ${isToday?'today-row':''}" style="--day-color:${d.color}">
+        <div class="week-day-name">${d.name}</div>
+        <div class="week-domain">
+          <div class="week-domain-name">${d.icon} ${d.domain}</div>
+          <div class="week-domain-sub">${isToday?'← TODAY':''}</div>
+        </div>
+        <div class="week-status-btns">
+          <div class="mini-status ${status==='done'?'sel-done':''}" onclick="setWeekStatus('${key}','done')">✅</div>
+          <div class="mini-status ${status==='partial'?'sel-partial':''}" onclick="setWeekStatus('${key}','partial')">⚡</div>
+          <div class="mini-status ${status==='missed'?'sel-missed':''}" onclick="setWeekStatus('${key}','missed')">❌</div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+window.setWeekStatus = async function(key, status) {
+  const ds = await loadDay(key);
+  ds.anchorStatus = status;
+  await saveDay(key, ds);
+  await renderWeek();
+  if(key===dateKey()) applyAnchorStatus(status);
+  showToast('Logged ✓');
+};
+
+// ── REVIEW ────────────────────────────────────────
+async function renderReview() {
+  // Streak
+  let streak=0, d=new Date();
+  for(let i=0;i<365;i++){
+    const k=new Date(d); k.setDate(d.getDate()-i);
+    const key=k.toISOString().split('T')[0];
+    const ds=await loadDay(key);
+    if(ds.anchorStatus==='done') streak++;
+    else break;
+  }
+  document.getElementById('streak-num').textContent = streak;
+
+  // Last 14 days
+  const last14 = await Promise.all(Array.from({length:14},(_,i)=>{
+    const dd=new Date(); dd.setDate(dd.getDate()-i);
+    return loadDay(dd.toISOString().split('T')[0]);
+  }));
+  const done14=last14.filter(s=>s?.anchorStatus==='done').length;
+  const tracked14=last14.filter(s=>s?.anchorStatus).length;
+  document.getElementById('completion-rate').textContent = tracked14?Math.round(done14/tracked14*100)+'%':'—';
+
+  // Domain bars
+  const domains=['GECO — Production','GECO — Strategy','Construction / QS','Health & Fitness','Wildcard'];
+  const domainDone={}, domainTotal={};
+  const allKeys = Object.keys(localCache);
+  allKeys.forEach(k=>{
+    const ds=localCache[k];
+    if(!ds?.anchorStatus) return;
+    const dd=new Date(k); const dIdx=dd.getDay();
+    const domain=DAYS[dIdx].domain;
+    domainTotal[domain]=(domainTotal[domain]||0)+1;
+    if(ds.anchorStatus==='done') domainDone[domain]=(domainDone[domain]||0)+1;
+  });
+  document.getElementById('domain-bars').innerHTML = domains.map(dom=>{
+    const total=domainTotal[dom]||0, done=domainDone[dom]||0;
+    const pct=total?Math.round(done/total*100):0;
+    const color=DOMAIN_COLORS[dom]||'var(--accent)';
+    return `<div class="domain-bar-row">
+      <div class="domain-bar-header"><span class="domain-bar-name">${dom}</span><span class="domain-bar-pct">${done}/${total} · ${pct}%</span></div>
+      <div class="domain-bar-track"><div class="domain-bar-fill" style="width:${pct}%;background:${color}"></div></div>
+    </div>`;
+  }).join('');
+
+  // History dots
+  document.getElementById('week-history').innerHTML = Array.from({length:14},(_,i)=>{
+    const dd=new Date(); dd.setDate(dd.getDate()-(13-i));
+    const k=dd.toISOString().split('T')[0];
+    const s=localCache[k]?.anchorStatus;
+    const cls=s==='done'?'done':s==='partial'?'partial':s==='missed'?'missed':'';
+    const icon=s==='done'?'✅':s==='partial'?'⚡':s==='missed'?'❌':dd.toLocaleDateString('en-GB',{day:'numeric'});
+    return `<div class="hist-dot ${cls}">${icon}</div>`;
+  }).join('');
+
+  // Load review answers
+  const reviewKey = 'review_'+getWeekKeys()[0].key;
+  const rv = await loadDay(reviewKey);
+  ['q1','q2','q3','q4'].forEach(q=>{ const el=document.getElementById('review-'+q); if(el&&rv[q]) el.value=rv[q]; });
+}
+
+window.saveReview = async function() {
+  const reviewKey = 'review_'+getWeekKeys()[0].key;
+  await saveDay(reviewKey, {
+    q1:document.getElementById('review-q1').value,
+    q2:document.getElementById('review-q2').value,
+    q3:document.getElementById('review-q3').value,
+    q4:document.getElementById('review-q4').value,
+  });
+  showToast('✓ Review saved & synced');
+};
+
+// ── UTILS ─────────────────────────────────────────
+function escHtml(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function showToast(msg, isError=false) {
+  const t=document.getElementById('toast');
+  t.textContent=msg;
+  t.className='toast'+(isError?' error-toast':'');
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2400);
+}
+
+initFirebase();
+</script>
+</body>
+</html>
