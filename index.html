@@ -1244,7 +1244,7 @@ async function loadCarryOver() {
   const yd = new Date(); yd.setDate(yd.getDate() - 1);
   const ydKey = yd.toISOString().split('T')[0];
   const ydData = await loadDay(ydKey);
-  const items = (ydData?.tasks?.wind || []);
+  const items = (ydData?.tasks?.wind || []).filter(t => !t.done);
   const section = document.getElementById('carryover-section');
   if (!items.length) { section.style.display = 'none'; return; }
   section.style.display = 'block';
