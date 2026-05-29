@@ -744,6 +744,29 @@ function defaultDay() {
   return { anchorStatus: null, tasks: { flex:[], wind:[], learn:[] }, captures: [] };
 }
 
+// ── CARRY OVER INCOMPLETE TASKS ───────────────────
+async function carryOverIncompleteTasks(todayKey, todayData) {
+  const existingIds = new Set();
+  ['flex','wind','learn'].forEach(z => (todayData.tasks[z]||[]).forEach(t => existingIds.add(t.id)));
+
+  let modified = false;
+  for (let i = 1; i <= 7; i++) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    const prevKey = d.toISOString().split('T')[0];
+    const prevData = await loadDay(prevKey);
+    ['flex','wind','learn'].forEach(z => {
+      (prevData?.tasks?.[z] || []).filter(t => !t.done && !existingIds.has(t.id)).forEach(t => {
+        if (!todayData.tasks[z]) todayData.tasks[z] = [];
+        todayData.tasks[z].push({ ...t, carried: true });
+        existingIds.add(t.id);
+        modified = true;
+      });
+    });
+  }
+  if (modified) await saveDay(todayKey, todayData);
+  return todayData;
+}
+
 // ── APP INIT ──────────────────────────────────────
 async function initApp() {
   const today = new Date();
@@ -762,7 +785,8 @@ async function initApp() {
   mondayDate.setDate(today.getDate()+(today.getDay()===0?-6:1-today.getDay()));
   document.getElementById('week-label').textContent = 'Wk '+mondayDate.toLocaleDateString('en-GB',{day:'numeric',month:'short'});
 
-  const ds = await loadDay(dateKey());
+  let ds = await loadDay(dateKey());
+  ds = await carryOverIncompleteTasks(dateKey(), ds);
   setSyncState('synced');
 
   if (ds.anchorStatus) applyAnchorStatus(ds.anchorStatus);
