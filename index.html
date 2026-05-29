@@ -444,6 +444,25 @@
   }
   .signin-btn:active { transform: scale(0.97); opacity: 0.85; }
 
+  /* ── CARRY OVER BLOCK ── */
+  .carryover-block { border-color: rgba(255,107,53,0.35); }
+  .carryover-block::before { background: var(--accent2) !important; }
+  .carryover-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 10px;
+    background: rgba(255,107,53,0.07); border: 1px solid rgba(255,107,53,0.2);
+    border-radius: 8px; font-size: 0.82rem; margin-bottom: 6px;
+  }
+  .carryover-item.done-co { opacity: 0.45; }
+  .carryover-item.done-co .co-text { text-decoration: line-through; color: var(--muted); }
+  .co-check {
+    width: 18px; height: 18px; border: 2px solid rgba(255,107,53,0.4); border-radius: 5px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; font-size: 0.7rem; color: transparent; transition: all 0.2s;
+  }
+  .carryover-item.done-co .co-check { background: var(--accent2); border-color: var(--accent2); color: #fff; }
+  .co-text { flex: 1; }
+
   /* ── MOBILE: hide tab nav, show bottom nav ── */
   .tab-nav { display: none; }
   .sidebar { display: none; }
@@ -696,6 +715,17 @@
           <button class="status-btn" id="btn-partial" onclick="setAnchorStatus('partial')"><span class="icon">⚡</span>Partial</button>
           <button class="status-btn" id="btn-missed" onclick="setAnchorStatus('missed')"><span class="icon">❌</span>Missed</button>
         </div>
+      </div>
+
+      <!-- Previous Day Carry Over -->
+      <div class="zone-block carryover-block" id="carryover-section" style="display:none;">
+        <div class="zone-header">
+          <span class="zone-icon">🔁</span>
+          <span class="zone-name">Yesterday's Wind-Down</span>
+          <span class="zone-time" style="color:var(--accent2);">Carry Over</span>
+        </div>
+        <p style="font-size:0.72rem;color:var(--muted);margin-bottom:10px;">These didn't get done yesterday. Deal with them first.</p>
+        <div id="carryover-list"></div>
       </div>
 
       <div class="zones-grid">
@@ -975,16 +1005,17 @@ function defaultDay() {
 }
 
 // ── CARRY OVER INCOMPLETE TASKS ───────────────────
+// Wind-down tasks are shown in their own carry-over section, not auto-merged
 async function carryOverIncompleteTasks(todayKey, todayData) {
   const existingIds = new Set();
-  ['flex','wind','learn'].forEach(z => (todayData.tasks[z]||[]).forEach(t => existingIds.add(t.id)));
+  ['flex','learn'].forEach(z => (todayData.tasks[z]||[]).forEach(t => existingIds.add(t.id)));
 
   let modified = false;
   for (let i = 1; i <= 7; i++) {
     const d = new Date(); d.setDate(d.getDate() - i);
     const prevKey = d.toISOString().split('T')[0];
     const prevData = await loadDay(prevKey);
-    ['flex','wind','learn'].forEach(z => {
+    ['flex','learn'].forEach(z => {
       (prevData?.tasks?.[z] || []).filter(t => !t.done && !existingIds.has(t.id)).forEach(t => {
         if (!todayData.tasks[z]) todayData.tasks[z] = [];
         todayData.tasks[z].push({ ...t, carried: true });
@@ -996,6 +1027,55 @@ async function carryOverIncompleteTasks(todayKey, todayData) {
   if (modified) await saveDay(todayKey, todayData);
   return todayData;
 }
+
+// ── YESTERDAY'S WIND-DOWN CARRY OVER ──────────────
+async function loadCarryOver() {
+  const yd = new Date(); yd.setDate(yd.getDate() - 1);
+  const ydKey = yd.toISOString().split('T')[0];
+  const ydData = await loadDay(ydKey);
+  const items = (ydData?.tasks?.wind || []);
+  const section = document.getElementById('carryover-section');
+  if (!items.length) { section.style.display = 'none'; return; }
+  section.style.display = 'block';
+  document.getElementById('carryover-list').innerHTML = items.map(t => `
+    <div class="carryover-item ${t.done?'done-co':''}" id="co-item-${t.id}">
+      <div class="co-check" onclick="toggleCarryOver('${ydKey}',${t.id})">${t.done?'✓':''}</div>
+      <div class="co-text">${escHtml(t.text)}</div>
+      <button class="move-btn" onclick="moveCarryOverToFlex('${ydKey}',${t.id})">→ Flex</button>
+      <button class="move-btn" onclick="moveCarryOverToWind('${ydKey}',${t.id})" style="margin-left:4px">→ Wind</button>
+    </div>`).join('');
+}
+
+window.toggleCarryOver = async function(ydKey, id) {
+  const ds = await loadDay(ydKey);
+  const t = ds.tasks.wind.find(t=>t.id===id);
+  if(t) { t.done = !t.done; await saveDay(ydKey, ds); loadCarryOver(); }
+};
+
+window.moveCarryOverToFlex = async function(ydKey, id) {
+  const dk = dateKey();
+  const [ydData, todayData] = await Promise.all([loadDay(ydKey), loadDay(dk)]);
+  const t = ydData.tasks.wind.find(t=>t.id===id);
+  if(t) {
+    todayData.tasks.flex.push({...t, done:false, carried:true});
+    ydData.tasks.wind = ydData.tasks.wind.filter(t=>t.id!==id);
+    await Promise.all([saveDay(ydKey, ydData), saveDay(dk, todayData)]);
+    loadCarryOver(); renderTasks('flex', todayData); showToast('Moved to Flex Zone ✓');
+  }
+};
+
+window.moveCarryOverToWind = async function(ydKey, id) {
+  const dk = dateKey();
+  const [ydData, todayData] = await Promise.all([loadDay(ydKey), loadDay(dk)]);
+  const t = ydData.tasks.wind.find(t=>t.id===id);
+  if(t) {
+    if(!todayData.tasks.wind) todayData.tasks.wind=[];
+    todayData.tasks.wind.push({...t, done:false, carried:true});
+    ydData.tasks.wind = ydData.tasks.wind.filter(t=>t.id!==id);
+    await Promise.all([saveDay(ydKey, ydData), saveDay(dk, todayData)]);
+    loadCarryOver(); renderTasks('wind', todayData); showToast("Added to today's Wind-Down ✓");
+  }
+};
 
 // ── APP INIT ──────────────────────────────────────
 async function initApp() {
@@ -1022,6 +1102,7 @@ async function initApp() {
   if (ds.anchorStatus) applyAnchorStatus(ds.anchorStatus);
   ['flex','wind','learn'].forEach(z => renderTasks(z, ds));
   renderCaptures(ds);
+  await loadCarryOver();
 }
 
 // ── ANCHOR STATUS ─────────────────────────────────
