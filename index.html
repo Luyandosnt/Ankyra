@@ -463,6 +463,28 @@
   .carryover-item.done-co .co-check { background: var(--accent2); border-color: var(--accent2); color: #fff; }
   .co-text { flex: 1; }
 
+  /* ── BIN VIEW ── */
+  .bin-empty { text-align:center; padding: 40px 20px; color: var(--muted); font-size:0.82rem; }
+  .bin-empty .bin-icon { font-size: 2.5rem; display:block; margin-bottom:10px; }
+  .bin-meta { font-size:0.68rem; color:var(--muted); margin-bottom:16px; letter-spacing:0.05em; }
+  .bin-item {
+    display:flex; align-items:center; gap:10px;
+    padding: 10px 12px; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 10px; margin-bottom:8px;
+  }
+  .bin-item-info { flex:1; }
+  .bin-item-text { font-size:0.82rem; color: var(--text); }
+  .bin-item-meta { font-size:0.65rem; color: var(--muted); margin-top:2px; }
+  .bin-restore { background: none; border: 1px solid var(--border); border-radius:6px; padding:4px 9px; font-size:0.68rem; color:var(--muted); cursor:pointer; transition:all 0.15s; }
+  .bin-restore:hover { border-color:var(--accent); color:var(--accent); }
+  .bin-perm-del { background:none; border:none; color:var(--muted); cursor:pointer; font-size:0.9rem; padding:2px 4px; }
+  .bin-clear-btn {
+    width:100%; background:none; border:1px solid rgba(255,107,53,0.3);
+    border-radius:10px; padding:10px; color:var(--missed); font-size:0.78rem;
+    cursor:pointer; margin-top:8px; transition: background 0.2s;
+  }
+  .bin-clear-btn:hover { background: rgba(255,107,53,0.08); }
+
   /* ── MOBILE: hide tab nav, show bottom nav ── */
   .tab-nav { display: none; }
   .sidebar { display: none; }
@@ -663,6 +685,9 @@
       <button class="sidebar-btn" id="sb-review" onclick="showView('review',null,null,'sb-review')">
         <span class="sb-icon">📊</span> Review
       </button>
+      <button class="sidebar-btn" id="sb-bin" onclick="showView('bin',null,null,'sb-bin')">
+        <span class="sb-icon">🗑️</span> Bin
+      </button>
     </nav>
     <div class="sidebar-spacer"></div>
     <div class="sidebar-sync">
@@ -786,6 +811,13 @@
       </div>
     </div>
 
+    <!-- BIN -->
+    <div id="view-bin" class="view">
+      <div class="section-title">Recycle Bin</div>
+      <div class="bin-meta" id="bin-meta">Items are permanently deleted after 24 hours</div>
+      <div id="bin-list"></div>
+    </div>
+
     <!-- WEEK -->
     <div id="view-week" class="view">
       <div class="section-title">This Week</div>
@@ -818,6 +850,7 @@
   <button class="nav-btn active" id="nav-today" onclick="showView('today',null,'nav-today')"><span class="nav-icon">⚓</span>Today</button>
   <button class="nav-btn" id="nav-week" onclick="showView('week',null,'nav-week')"><span class="nav-icon">📅</span>Week</button>
   <button class="nav-btn" id="nav-review" onclick="showView('review',null,'nav-review')"><span class="nav-icon">📊</span>Review</button>
+  <button class="nav-btn" id="nav-bin" onclick="showView('bin',null,'nav-bin')"><span class="nav-icon">🗑️</span>Bin</button>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -997,16 +1030,45 @@ async function saveDay(dateK, data) {
       setSyncState('error');
       showToast('Sync failed — will retry', true);
     }
-  }, 800);
+  }, 400);
 }
 
 function defaultDay() {
   return { anchorStatus: null, tasks: { flex:[], wind:[], learn:[] }, captures: [] };
 }
 
+// ── BIN ───────────────────────────────────────────
+function binDocRef() { return doc(db, 'users', currentUser.uid, 'meta', 'bin'); }
+let binCache = null;
+
+async function loadBin() {
+  try {
+    const snap = await getDoc(binDocRef());
+    let items = snap.exists() ? (snap.data().items || []) : [];
+    const now = Date.now();
+    const fresh = items.filter(i => now - i.deletedAt < 24*60*60*1000);
+    if (fresh.length !== items.length) { items = fresh; await saveBin(items); }
+    binCache = items;
+    return items;
+  } catch(e) { return binCache || []; }
+}
+
+async function saveBin(items) {
+  binCache = items;
+  try { await setDoc(binDocRef(), { items }); } catch(e) {}
+}
+
+async function addToBin(task, zone, fromDate) {
+  const items = await loadBin();
+  items.push({ ...task, zone, fromDate, deletedAt: Date.now() });
+  await saveBin(items);
+}
+
 // ── CARRY OVER INCOMPLETE TASKS ───────────────────
-// Wind-down tasks are shown in their own carry-over section, not auto-merged
+// Wind-down tasks shown in carry-over section; deleted IDs (bin) are skipped
 async function carryOverIncompleteTasks(todayKey, todayData) {
+  const binItems = await loadBin();
+  const deletedIds = new Set(binItems.map(b => b.id));
   const existingIds = new Set();
   ['flex','learn'].forEach(z => (todayData.tasks[z]||[]).forEach(t => existingIds.add(t.id)));
 
@@ -1016,12 +1078,14 @@ async function carryOverIncompleteTasks(todayKey, todayData) {
     const prevKey = d.toISOString().split('T')[0];
     const prevData = await loadDay(prevKey);
     ['flex','learn'].forEach(z => {
-      (prevData?.tasks?.[z] || []).filter(t => !t.done && !existingIds.has(t.id)).forEach(t => {
-        if (!todayData.tasks[z]) todayData.tasks[z] = [];
-        todayData.tasks[z].push({ ...t, carried: true });
-        existingIds.add(t.id);
-        modified = true;
-      });
+      (prevData?.tasks?.[z] || [])
+        .filter(t => !t.done && !existingIds.has(t.id) && !deletedIds.has(t.id))
+        .forEach(t => {
+          if (!todayData.tasks[z]) todayData.tasks[z] = [];
+          todayData.tasks[z].push({ ...t, carried: true });
+          existingIds.add(t.id);
+          modified = true;
+        });
     });
   }
   if (modified) await saveDay(todayKey, todayData);
@@ -1149,9 +1213,12 @@ window.toggleTask = async function(zone, id) {
 window.deleteTask = async function(zone, id) {
   const dk = dateKey();
   const ds = await loadDay(dk);
+  const task = ds.tasks[zone].find(t=>t.id===id);
+  if(task) await addToBin(task, zone, dk);
   ds.tasks[zone] = ds.tasks[zone].filter(t=>t.id!==id);
   await saveDay(dk, ds);
   renderTasks(zone, ds);
+  showToast('Moved to bin 🗑️');
 };
 
 function renderTasks(zone, ds) {
@@ -1212,9 +1279,12 @@ window.moveToFlex = async function(id) {
 window.deleteCapture = async function(id) {
   const dk = dateKey();
   const ds = await loadDay(dk);
+  const item = ds.captures.find(c=>c.id===id);
+  if(item) await addToBin({...item, text:item.text}, 'capture', dk);
   ds.captures = ds.captures.filter(c=>c.id!==id);
   await saveDay(dk, ds);
   renderCaptures(ds);
+  showToast('Moved to bin 🗑️');
 };
 
 function renderCaptures(ds) {
@@ -1239,6 +1309,7 @@ window.showView = async function(id, tabBtn, navId, sbId) {
   const sbEl = document.getElementById(sbTarget); if(sbEl) sbEl.classList.add('active');
   if(id==='week') await renderWeek();
   if(id==='review') await renderReview();
+  if(id==='bin') await renderBin();
 };
 
 async function renderWeek() {
@@ -1345,6 +1416,66 @@ window.saveReview = async function() {
     q4:document.getElementById('review-q4').value,
   });
   showToast('✓ Review saved & synced');
+};
+
+// ── BIN VIEW ──────────────────────────────────────
+async function renderBin() {
+  const items = await loadBin();
+  const list = document.getElementById('bin-list');
+  const meta = document.getElementById('bin-meta');
+  if (!items.length) {
+    meta.textContent = 'Items are permanently deleted after 24 hours';
+    list.innerHTML = '<div class="bin-empty"><span class="bin-icon">🗑️</span>Bin is empty</div>';
+    return;
+  }
+  meta.textContent = `${items.length} item${items.length!==1?'s':''} · auto-deleted after 24 hours`;
+  const now = Date.now();
+  list.innerHTML = items.slice().reverse().map(i => {
+    const age = Math.floor((now - i.deletedAt) / 60000);
+    const ageStr = age < 60 ? `${age}m ago` : `${Math.floor(age/60)}h ago`;
+    const zoneLabel = {flex:'Flex Zone', wind:'Wind-Down', learn:'Learning', capture:'Capture'}[i.zone] || i.zone;
+    return `<div class="bin-item">
+      <div class="bin-item-info">
+        <div class="bin-item-text">${escHtml(i.text)}</div>
+        <div class="bin-item-meta">${zoneLabel} · ${ageStr}</div>
+      </div>
+      <button class="bin-restore" onclick="restoreFromBin(${i.id})">Restore</button>
+      <button class="bin-perm-del" onclick="permanentDelete(${i.id})">✕</button>
+    </div>`;
+  }).join('') + `<button class="bin-clear-btn" onclick="clearBin()">🗑️ Empty bin now</button>`;
+}
+
+window.restoreFromBin = async function(id) {
+  const items = await loadBin();
+  const item = items.find(i=>i.id===id);
+  if(!item) return;
+  const dk = dateKey();
+  const ds = await loadDay(dk);
+  if(item.zone === 'capture') {
+    if(!ds.captures) ds.captures=[];
+    ds.captures.push({id:item.id, text:item.text});
+  } else {
+    if(!ds.tasks[item.zone]) ds.tasks[item.zone]=[];
+    ds.tasks[item.zone].push({id:item.id, text:item.text, done:false});
+  }
+  await saveDay(dk, ds);
+  await saveBin(items.filter(i=>i.id!==id));
+  if(item.zone==='capture') renderCaptures(ds);
+  else renderTasks(item.zone, ds);
+  await renderBin();
+  showToast('Restored ✓');
+};
+
+window.permanentDelete = async function(id) {
+  const items = await loadBin();
+  await saveBin(items.filter(i=>i.id!==id));
+  await renderBin();
+};
+
+window.clearBin = async function() {
+  await saveBin([]);
+  await renderBin();
+  showToast('Bin emptied');
 };
 
 // ── UTILS ─────────────────────────────────────────
