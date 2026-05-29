@@ -463,6 +463,80 @@
   .carryover-item.done-co .co-check { background: var(--accent2); border-color: var(--accent2); color: #fff; }
   .co-text { flex: 1; }
 
+  /* ── CURRENT READ ── */
+  .current-read-block {
+    margin-top: 14px; padding-top: 14px;
+    border-top: 1px solid var(--border);
+  }
+  .cr-label { font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; display:flex; align-items:center; gap:6px; }
+  .cr-label::after { content:''; flex:1; height:1px; background:var(--border); }
+  .cr-set-form { display:flex; flex-direction:column; gap:8px; }
+  .cr-set-form input { width:100%; background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:10px 12px; font-family:'DM Sans',sans-serif; font-size:0.82rem; color:var(--text); outline:none; transition:border-color 0.2s; }
+  .cr-set-form input:focus { border-color:var(--learning); }
+  .cr-set-form .cr-pages-row { display:flex; gap:8px; }
+  .cr-set-form .cr-pages-row input { flex:1; }
+  .cr-start-btn { background:var(--learning); border:none; border-radius:10px; padding:10px; color:#000; font-family:'DM Sans',sans-serif; font-weight:600; font-size:0.82rem; cursor:pointer; transition:opacity 0.2s; }
+  .cr-start-btn:active { opacity:0.85; }
+  .cr-active { display:flex; flex-direction:column; gap:10px; }
+  .cr-book-title { font-size:0.95rem; font-weight:600; color:var(--text); }
+  .cr-progress-row { display:flex; align-items:center; gap:10px; }
+  .cr-progress-track { flex:1; height:6px; background:var(--surface2); border-radius:3px; overflow:hidden; }
+  .cr-progress-fill { height:100%; background:var(--learning); border-radius:3px; transition:width 0.4s cubic-bezier(0.16,1,0.3,1); }
+  .cr-pct { font-family:'DM Mono',monospace; font-size:0.7rem; color:var(--muted); white-space:nowrap; }
+  .cr-page-row { display:flex; gap:8px; align-items:center; }
+  .cr-page-input { width:90px; background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:8px 10px; font-family:'DM Mono',monospace; font-size:0.88rem; color:var(--text); outline:none; text-align:center; transition:border-color 0.2s; }
+  .cr-page-input:focus { border-color:var(--learning); }
+  .cr-page-label { font-size:0.78rem; color:var(--muted); }
+  .cr-update-btn { background:var(--learning); border:none; border-radius:8px; padding:8px 14px; color:#000; font-size:0.78rem; font-weight:600; cursor:pointer; transition:opacity 0.2s; }
+  .cr-change-btn { background:none; border:1px solid var(--border); border-radius:8px; padding:6px 10px; color:var(--muted); font-size:0.72rem; cursor:pointer; margin-top:2px; }
+
+  /* ── COMPLETION MODAL ── */
+  .completion-modal {
+    position:fixed; inset:0; z-index:400;
+    background:rgba(0,0,0,0.7); backdrop-filter:blur(6px);
+    display:flex; align-items:center; justify-content:center; padding:24px;
+  }
+  .completion-card {
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:20px; padding:32px 24px; text-align:center;
+    max-width:320px; width:100%;
+    animation: popIn 0.4s cubic-bezier(0.16,1,0.3,1);
+  }
+  @keyframes popIn { from{transform:scale(0.8);opacity:0} to{transform:scale(1);opacity:1} }
+  .completion-emoji { font-size:3rem; display:block; margin-bottom:12px; }
+  .completion-title { font-family:'Bebas Neue',sans-serif; font-size:1.8rem; letter-spacing:0.06em; color:var(--accent); margin-bottom:6px; }
+  .completion-book { font-size:1rem; font-weight:600; color:var(--text); margin-bottom:8px; }
+  .completion-sub { font-size:0.78rem; color:var(--muted); line-height:1.5; margin-bottom:24px; }
+  .completion-btn { background:var(--accent); border:none; border-radius:12px; padding:13px 32px; color:#000; font-family:'Bebas Neue',sans-serif; font-size:1rem; letter-spacing:0.1em; cursor:pointer; }
+
+  /* ── LIBRARY VIEW ── */
+  .library-tabs { display:flex; gap:6px; margin-bottom:20px; flex-wrap:wrap; }
+  .lib-tab { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:7px 14px; font-size:0.72rem; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; color:var(--muted); cursor:pointer; transition:all 0.2s; }
+  .lib-tab.active { background:rgba(96,165,250,0.15); border-color:var(--learning); color:var(--learning); }
+  .book-card {
+    background:var(--surface); border:1px solid var(--border); border-radius:14px;
+    padding:16px; margin-bottom:10px; display:flex; flex-direction:column; gap:8px;
+  }
+  .book-card-header { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
+  .book-title-text { font-size:0.9rem; font-weight:600; color:var(--text); }
+  .book-status-badge { font-size:0.6rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:3px 8px; border-radius:20px; white-space:nowrap; }
+  .badge-reading { background:rgba(96,165,250,0.15); color:var(--learning); }
+  .badge-want { background:rgba(245,200,66,0.12); color:var(--partial); }
+  .badge-completed { background:rgba(78,205,196,0.15); color:var(--success); }
+  .book-progress-row { display:flex; align-items:center; gap:8px; }
+  .book-del-btn { background:none; border:none; color:var(--muted); cursor:pointer; font-size:0.85rem; padding:2px; }
+  .book-date { font-size:0.68rem; color:var(--muted); }
+  .add-book-form { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px; margin-bottom:16px; }
+  .add-book-form h4 { font-size:0.75rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); margin-bottom:12px; }
+  .add-book-form input, .add-book-form select { width:100%; background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:9px 12px; font-family:'DM Sans',sans-serif; font-size:0.82rem; color:var(--text); outline:none; margin-bottom:8px; transition:border-color 0.2s; }
+  .add-book-form input:focus { border-color:var(--learning); }
+  .add-book-form select { color:var(--text); cursor:pointer; }
+  .add-book-form select option { background:var(--surface2); }
+  .add-book-row { display:flex; gap:8px; }
+  .add-book-row input { margin-bottom:0; }
+  .lib-add-btn { background:var(--learning); border:none; border-radius:8px; padding:9px 16px; color:#000; font-family:'DM Sans',sans-serif; font-weight:600; font-size:0.82rem; cursor:pointer; white-space:nowrap; }
+  .lib-section-empty { font-size:0.78rem; color:var(--muted); text-align:center; padding:20px; }
+
   /* ── BIN VIEW ── */
   .bin-empty { text-align:center; padding: 40px 20px; color: var(--muted); font-size:0.82rem; }
   .bin-empty .bin-icon { font-size: 2.5rem; display:block; margin-bottom:10px; }
@@ -685,6 +759,9 @@
       <button class="sidebar-btn" id="sb-review" onclick="showView('review',null,null,'sb-review')">
         <span class="sb-icon">📊</span> Review
       </button>
+      <button class="sidebar-btn" id="sb-library" onclick="showView('library',null,null,'sb-library')">
+        <span class="sb-icon">📚</span> Library
+      </button>
       <button class="sidebar-btn" id="sb-bin" onclick="showView('bin',null,null,'sb-bin')">
         <span class="sb-icon">🗑️</span> Bin
       </button>
@@ -799,7 +876,7 @@
         <div class="zone-block">
           <div class="zone-header">
             <span class="zone-icon">🌙</span>
-            <span class="zone-name">Learning</span>
+            <span class="zone-name">Learning & Night Shift</span>
             <span class="zone-time">Evening · 45–60 mins</span>
           </div>
           <div class="task-input-row">
@@ -807,8 +884,60 @@
             <button class="add-btn" onclick="addTask('learn')" style="background:var(--learning)">+</button>
           </div>
           <div class="task-list" id="learn-tasks"></div>
+
+          <!-- Current Read -->
+          <div class="current-read-block">
+            <div class="cr-label">📖 Current Read</div>
+            <div id="cr-set-form">
+              <div class="cr-set-form">
+                <input id="cr-title-input" placeholder="Book title…" />
+                <div class="cr-pages-row">
+                  <input id="cr-pages-input" type="number" min="1" placeholder="Total pages" />
+                </div>
+                <button class="cr-start-btn" onclick="startReading()">Start Reading</button>
+              </div>
+            </div>
+            <div id="cr-active-block" style="display:none;">
+              <div class="cr-active">
+                <div class="cr-book-title" id="cr-book-title">—</div>
+                <div class="cr-progress-row">
+                  <div class="cr-progress-track"><div class="cr-progress-fill" id="cr-progress-fill" style="width:0%"></div></div>
+                  <div class="cr-pct" id="cr-pct">0%</div>
+                </div>
+                <div class="cr-page-row">
+                  <input class="cr-page-input" id="cr-last-page" type="number" min="0" placeholder="Page" />
+                  <span class="cr-page-label">of <span id="cr-total-pages">0</span> pages</span>
+                  <button class="cr-update-btn" onclick="updateLastPage()">Update</button>
+                </div>
+                <button class="cr-change-btn" onclick="changeBook()">Change book</button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
+    </div>
+
+    <!-- LIBRARY -->
+    <div id="view-library" class="view">
+      <div class="add-book-form">
+        <h4>Add a book</h4>
+        <input id="lib-title-input" placeholder="Book title…" />
+        <div class="add-book-row">
+          <input id="lib-pages-input" type="number" min="1" placeholder="Total pages (optional)" />
+          <select id="lib-status-select">
+            <option value="want">Want to Read</option>
+            <option value="reading">Currently Reading</option>
+            <option value="completed">Completed</option>
+          </select>
+        </div>
+        <button class="lib-add-btn" style="width:100%;margin-top:4px;" onclick="addBookToLibrary()">Add to Library</button>
+      </div>
+      <div class="library-tabs">
+        <button class="lib-tab active" id="libtab-reading" onclick="switchLibTab('reading')">📖 Reading</button>
+        <button class="lib-tab" id="libtab-want" onclick="switchLibTab('want')">🔖 Want</button>
+        <button class="lib-tab" id="libtab-completed" onclick="switchLibTab('completed')">✅ Completed</button>
+      </div>
+      <div id="lib-books-list"></div>
     </div>
 
     <!-- BIN -->
@@ -846,10 +975,22 @@
   </div><!-- /main-content -->
 </div>
 
+<!-- Completion Modal -->
+<div class="completion-modal" id="completion-modal" style="display:none;">
+  <div class="completion-card">
+    <span class="completion-emoji">🎉</span>
+    <div class="completion-title">Book Finished!</div>
+    <div class="completion-book" id="completion-book-name"></div>
+    <div class="completion-sub">You finished this book. It's been added to your library under Completed.</div>
+    <button class="completion-btn" onclick="dismissCompletion()">Awesome! 🙌</button>
+  </div>
+</div>
+
 <div class="bottom-nav" id="bottom-nav" style="display:none;">
   <button class="nav-btn active" id="nav-today" onclick="showView('today',null,'nav-today')"><span class="nav-icon">⚓</span>Today</button>
   <button class="nav-btn" id="nav-week" onclick="showView('week',null,'nav-week')"><span class="nav-icon">📅</span>Week</button>
   <button class="nav-btn" id="nav-review" onclick="showView('review',null,'nav-review')"><span class="nav-icon">📊</span>Review</button>
+  <button class="nav-btn" id="nav-library" onclick="showView('library',null,'nav-library')"><span class="nav-icon">📚</span>Library</button>
   <button class="nav-btn" id="nav-bin" onclick="showView('bin',null,'nav-bin')"><span class="nav-icon">🗑️</span>Bin</button>
 </div>
 
@@ -1173,6 +1314,7 @@ async function initApp() {
   ['flex','wind','learn'].forEach(z => renderTasks(z, ds));
   renderCaptures(ds);
   await loadCarryOver();
+  await renderCurrentRead();
 }
 
 // ── ANCHOR STATUS ─────────────────────────────────
@@ -1318,6 +1460,7 @@ window.showView = async function(id, tabBtn, navId, sbId) {
   if(id==='week') await renderWeek();
   if(id==='review') await renderReview();
   if(id==='bin') await renderBin();
+  if(id==='library') await renderLibrary();
 };
 
 async function renderWeek() {
@@ -1424,6 +1567,198 @@ window.saveReview = async function() {
     q4:document.getElementById('review-q4').value,
   });
   showToast('✓ Review saved & synced');
+};
+
+// ── CURRENT READ ──────────────────────────────────
+function currentReadDocRef() { return doc(db,'users',currentUser.uid,'meta','currentRead'); }
+function libraryDocRef()     { return doc(db,'users',currentUser.uid,'meta','library'); }
+
+let currentReadCache = null;
+let libraryCache = null;
+let currentLibTab = 'reading';
+
+async function loadCurrentRead() {
+  try {
+    const snap = await getDoc(currentReadDocRef());
+    currentReadCache = snap.exists() ? snap.data() : null;
+  } catch(e) { currentReadCache = null; }
+  return currentReadCache;
+}
+
+async function saveCurrentRead(data) {
+  currentReadCache = data;
+  try {
+    if(data) await setDoc(currentReadDocRef(), data);
+    else await setDoc(currentReadDocRef(), {});
+  } catch(e) {}
+}
+
+async function loadLibrary() {
+  try {
+    const snap = await getDoc(libraryDocRef());
+    libraryCache = snap.exists() ? (snap.data().books || []) : [];
+  } catch(e) { libraryCache = libraryCache || []; }
+  return libraryCache;
+}
+
+async function saveLibrary(books) {
+  libraryCache = books;
+  try { await setDoc(libraryDocRef(), { books }); } catch(e) {}
+}
+
+async function renderCurrentRead() {
+  const cr = await loadCurrentRead();
+  if (!cr || !cr.title) {
+    document.getElementById('cr-set-form').style.display = 'block';
+    document.getElementById('cr-active-block').style.display = 'none';
+    return;
+  }
+  document.getElementById('cr-set-form').style.display = 'none';
+  document.getElementById('cr-active-block').style.display = 'block';
+  document.getElementById('cr-book-title').textContent = cr.title;
+  document.getElementById('cr-total-pages').textContent = cr.totalPages;
+  document.getElementById('cr-last-page').value = cr.lastPage || 0;
+  const pct = cr.totalPages ? Math.min(100, Math.round((cr.lastPage||0) / cr.totalPages * 100)) : 0;
+  document.getElementById('cr-progress-fill').style.width = pct + '%';
+  document.getElementById('cr-pct').textContent = pct + '%';
+}
+
+window.startReading = async function() {
+  const title = document.getElementById('cr-title-input').value.trim();
+  const pages = parseInt(document.getElementById('cr-pages-input').value);
+  if(!title) { showToast('Enter a book title', true); return; }
+  if(!pages || pages < 1) { showToast('Enter total pages', true); return; }
+  const cr = { title, totalPages: pages, lastPage: 0, startedAt: Date.now() };
+  await saveCurrentRead(cr);
+  // Also add to library as 'reading' if not already there
+  const books = await loadLibrary();
+  const exists = books.find(b => b.title.toLowerCase() === title.toLowerCase());
+  if(!exists) { books.push({ id: Date.now(), title, totalPages: pages, lastPage: 0, status: 'reading', startedAt: Date.now() }); await saveLibrary(books); }
+  document.getElementById('cr-title-input').value = '';
+  document.getElementById('cr-pages-input').value = '';
+  await renderCurrentRead();
+  showToast('📖 Started reading!');
+};
+
+window.updateLastPage = async function() {
+  const cr = await loadCurrentRead();
+  if(!cr) return;
+  const page = parseInt(document.getElementById('cr-last-page').value) || 0;
+  cr.lastPage = Math.min(page, cr.totalPages);
+  await saveCurrentRead(cr);
+  // Update in library too
+  const books = await loadLibrary();
+  const book = books.find(b => b.title === cr.title && b.status === 'reading');
+  if(book) { book.lastPage = cr.lastPage; await saveLibrary(books); }
+  await renderCurrentRead();
+  if(cr.lastPage >= cr.totalPages) {
+    await finishBook(cr);
+  }
+};
+
+async function finishBook(cr) {
+  // Move to completed in library
+  const books = await loadLibrary();
+  const idx = books.findIndex(b => b.title === cr.title && b.status === 'reading');
+  if(idx > -1) { books[idx].status = 'completed'; books[idx].completedAt = Date.now(); books[idx].lastPage = cr.totalPages; }
+  else { books.push({ id: Date.now(), title: cr.title, totalPages: cr.totalPages, lastPage: cr.totalPages, status: 'completed', startedAt: cr.startedAt, completedAt: Date.now() }); }
+  await saveLibrary(books);
+  await saveCurrentRead(null);
+  // Show modal
+  document.getElementById('completion-book-name').textContent = cr.title;
+  document.getElementById('completion-modal').style.display = 'flex';
+}
+
+window.dismissCompletion = async function() {
+  document.getElementById('completion-modal').style.display = 'none';
+  await renderCurrentRead();
+};
+
+window.changeBook = async function() {
+  await saveCurrentRead(null);
+  await renderCurrentRead();
+};
+
+// ── LIBRARY ───────────────────────────────────────
+window.switchLibTab = function(tab) {
+  currentLibTab = tab;
+  document.querySelectorAll('.lib-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('libtab-'+tab).classList.add('active');
+  renderLibraryBooks();
+};
+
+async function renderLibrary() {
+  await loadLibrary();
+  renderLibraryBooks();
+}
+
+function renderLibraryBooks() {
+  const books = (libraryCache || []).filter(b => b.status === currentLibTab);
+  const list = document.getElementById('lib-books-list');
+  if(!books.length) {
+    const labels = { reading:'No books currently reading', want:'No books on your want list', completed:'No completed books yet' };
+    list.innerHTML = `<div class="lib-section-empty">${labels[currentLibTab]}</div>`;
+    return;
+  }
+  list.innerHTML = books.slice().reverse().map(b => {
+    const badgeClass = { reading:'badge-reading', want:'badge-want', completed:'badge-completed' }[b.status];
+    const badgeText = { reading:'Reading', want:'Want', completed:'Done' }[b.status];
+    let extra = '';
+    if(b.status === 'reading' && b.totalPages) {
+      const pct = Math.min(100, Math.round((b.lastPage||0) / b.totalPages * 100));
+      extra = `<div class="book-progress-row">
+        <div class="cr-progress-track" style="flex:1"><div class="cr-progress-fill" style="width:${pct}%"></div></div>
+        <span class="cr-pct">${pct}%</span>
+      </div>`;
+    }
+    if(b.status === 'completed' && b.completedAt) {
+      extra = `<div class="book-date">Finished ${new Date(b.completedAt).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}</div>`;
+    }
+    return `<div class="book-card">
+      <div class="book-card-header">
+        <div class="book-title-text">${escHtml(b.title)}</div>
+        <span class="book-status-badge ${badgeClass}">${badgeText}</span>
+      </div>
+      ${b.totalPages ? `<div class="book-date" style="color:var(--muted);font-size:0.7rem">${b.totalPages} pages</div>` : ''}
+      ${extra}
+      <div style="display:flex;gap:6px;margin-top:4px;flex-wrap:wrap;">
+        ${b.status!=='reading'  ? `<button class="cr-change-btn" onclick="moveBookStatus(${b.id},'reading')">→ Reading</button>` : ''}
+        ${b.status!=='want'     ? `<button class="cr-change-btn" onclick="moveBookStatus(${b.id},'want')">→ Want</button>` : ''}
+        ${b.status!=='completed'? `<button class="cr-change-btn" onclick="moveBookStatus(${b.id},'completed')">→ Done</button>` : ''}
+        <button class="book-del-btn" onclick="deleteBook(${b.id})" style="margin-left:auto">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+window.addBookToLibrary = async function() {
+  const title = document.getElementById('lib-title-input').value.trim();
+  const pages = parseInt(document.getElementById('lib-pages-input').value) || null;
+  const status = document.getElementById('lib-status-select').value;
+  if(!title) { showToast('Enter a book title', true); return; }
+  const books = await loadLibrary();
+  books.push({ id: Date.now(), title, totalPages: pages, lastPage: 0, status, startedAt: Date.now(), completedAt: status==='completed' ? Date.now() : null });
+  await saveLibrary(books);
+  document.getElementById('lib-title-input').value = '';
+  document.getElementById('lib-pages-input').value = '';
+  currentLibTab = status;
+  document.querySelectorAll('.lib-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('libtab-'+status).classList.add('active');
+  renderLibraryBooks();
+  showToast('📚 Added to library');
+};
+
+window.moveBookStatus = async function(id, status) {
+  const books = await loadLibrary();
+  const b = books.find(b=>b.id===id);
+  if(b) { b.status = status; if(status==='completed') b.completedAt = Date.now(); await saveLibrary(books); renderLibraryBooks(); }
+};
+
+window.deleteBook = async function(id) {
+  const books = await loadLibrary();
+  await saveLibrary(books.filter(b=>b.id!==id));
+  renderLibraryBooks();
+  showToast('Book removed');
 };
 
 // ── BIN VIEW ──────────────────────────────────────
