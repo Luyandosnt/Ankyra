@@ -403,6 +403,125 @@
   .loading-dots span:nth-child(2) { animation-delay: 0.2s; }
   .loading-dots span:nth-child(3) { animation-delay: 0.4s; }
   @keyframes bounce { 0%,80%,100%{transform:scale(0.6);opacity:0.4} 40%{transform:scale(1);opacity:1} }
+
+  /* ── MOBILE: hide tab nav, show bottom nav ── */
+  .tab-nav { display: none; }
+  .sidebar { display: none; }
+  .zones-grid { display: flex; flex-direction: column; gap: 0; }
+  .review-questions-grid { display: flex; flex-direction: column; }
+
+  /* ── DESKTOP ── */
+  @media (min-width: 768px) {
+    body { overflow-x: hidden; }
+
+    /* Hide mobile-only elements */
+    .bottom-nav { display: none !important; }
+    .header-logo-block { display: none; }
+    .sync-bar { display: none; }
+
+    /* App: sidebar + content */
+    .app {
+      display: flex;
+      flex-direction: row;
+      max-width: 100%;
+      padding: 0;
+      min-height: 100vh;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      width: 230px;
+      min-height: 100vh;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      padding: 32px 20px 28px;
+      position: fixed;
+      top: 0; left: 0;
+      z-index: 50;
+    }
+    .sidebar-logo {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 2rem; letter-spacing: 0.1em;
+      color: var(--accent); line-height: 1; margin-bottom: 4px;
+    }
+    .sidebar-v1 { font-size: 1rem; color: var(--muted); }
+    .sidebar-tagline {
+      font-size: 0.6rem; letter-spacing: 0.15em;
+      text-transform: uppercase; color: var(--muted); margin-bottom: 32px;
+    }
+    .sidebar-nav { display: flex; flex-direction: column; gap: 4px; }
+    .sidebar-btn {
+      display: flex; align-items: center; gap: 10px;
+      background: none; border: none;
+      color: var(--muted); font-family: 'DM Sans', sans-serif;
+      font-size: 0.85rem; font-weight: 500;
+      padding: 10px 14px; border-radius: 10px; cursor: pointer;
+      transition: all 0.2s; text-align: left; width: 100%;
+    }
+    .sidebar-btn:hover { background: var(--surface2); color: var(--text); }
+    .sidebar-btn.active { background: rgba(245,200,66,0.12); color: var(--accent); }
+    .sb-icon { font-size: 1.1rem; }
+    .sidebar-spacer { flex: 1; }
+    .sidebar-sync {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 0; border-top: 1px solid var(--border);
+      margin-bottom: 12px;
+    }
+    .sidebar-user {
+      display: flex; align-items: center; gap: 10px;
+    }
+    .sidebar-user-info {
+      display: flex; flex-direction: column; gap: 2px;
+    }
+
+    /* Main content offset */
+    .main-content {
+      margin-left: 230px;
+      flex: 1;
+      max-width: calc(100% - 230px);
+    }
+
+    /* Header — desktop: date only, no logo */
+    .header {
+      padding: 24px 32px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .header-right { flex-direction: row; align-items: center; gap: 16px; }
+    .user-row { display: none; }
+
+    /* Views */
+    .view { padding: 28px 32px; }
+
+    /* Today: 2-col zones grid */
+    .zones-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    /* Week: wider rows */
+    .week-grid { gap: 10px; }
+    .week-row { padding: 18px 20px; }
+
+    /* Review: 2-col questions */
+    .review-questions-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .review-questions-grid .review-q { margin-bottom: 0; }
+    .review-textarea { min-height: 100px; }
+
+    /* Wider streak/domain */
+    .streak-row { grid-template-columns: repeat(2, 180px); }
+    .save-btn { max-width: 300px; }
+
+    /* Toast offset */
+    .toast { bottom: 32px; }
+  }
 </style>
 </head>
 <body>
@@ -457,128 +576,165 @@
 
 <!-- Main App -->
 <div class="app" id="main-app" style="display:none;">
-  <div class="header">
-    <div>
-      <div class="logo">ANKYRA v1</div>
-      <div class="tagline">Commitment Initializer And Monitor</div>
+
+  <!-- Desktop Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">ANKYRA <span class="sidebar-v1">v1</span></div>
+    <div class="sidebar-tagline">Commitment Initializer And Monitor</div>
+    <nav class="sidebar-nav">
+      <button class="sidebar-btn active" id="sb-today" onclick="showView('today',null,null,'sb-today')">
+        <span class="sb-icon">⚓</span> Today
+      </button>
+      <button class="sidebar-btn" id="sb-week" onclick="showView('week',null,null,'sb-week')">
+        <span class="sb-icon">📅</span> Week
+      </button>
+      <button class="sidebar-btn" id="sb-review" onclick="showView('review',null,null,'sb-review')">
+        <span class="sb-icon">📊</span> Review
+      </button>
+    </nav>
+    <div class="sidebar-spacer"></div>
+    <div class="sidebar-sync">
+      <div class="sync-dot" id="sync-dot-sb"></div>
+      <span id="sync-label-sb" style="font-size:0.68rem;color:var(--muted);">Connecting…</span>
     </div>
-    <div class="header-right">
-      <div class="date-badge">
-        <div id="date-label">Loading…</div>
-        <span id="week-label"></span>
-      </div>
-      <div class="user-row">
-        <div class="user-avatar" id="user-avatar">?</div>
-        <span id="user-name">…</span>
+    <div class="sidebar-user">
+      <div class="user-avatar" id="user-avatar-sb">?</div>
+      <div class="sidebar-user-info">
+        <span id="user-name-sb" style="font-size:0.8rem;color:var(--text);">…</span>
         <button class="signout-btn" onclick="signOut()">sign out</button>
       </div>
     </div>
-  </div>
+  </aside>
 
-  <div class="sync-bar">
-    <div class="sync-dot" id="sync-dot"></div>
-    <span class="sync-label" id="sync-label">Connecting…</span>
-  </div>
-
-  <div class="tab-nav">
-    <button class="tab-btn active" onclick="showView('today', this)">Today</button>
-    <button class="tab-btn" onclick="showView('week', this)">Week</button>
-    <button class="tab-btn" onclick="showView('review', this)">Review</button>
-  </div>
-
-  <!-- TODAY -->
-  <div id="view-today" class="view active">
-    <div class="today-anchor" id="anchor-card">
-      <div class="anchor-label">⚓ Today's Anchor Block · 90 mins</div>
-      <div class="anchor-day" id="anchor-day-name">MONDAY</div>
-      <div class="anchor-title" id="anchor-title">GECO — Production</div>
-      <div class="anchor-desc" id="anchor-desc">Loading…</div>
-      <div class="anchor-status-row">
-        <button class="status-btn" id="btn-done" onclick="setAnchorStatus('done')"><span class="icon">✅</span>Completed</button>
-        <button class="status-btn" id="btn-partial" onclick="setAnchorStatus('partial')"><span class="icon">⚡</span>Partial</button>
-        <button class="status-btn" id="btn-missed" onclick="setAnchorStatus('missed')"><span class="icon">❌</span>Missed</button>
+  <!-- Main Content -->
+  <div class="main-content">
+    <div class="header">
+      <div class="header-logo-block">
+        <div class="logo">ANKYRA v1</div>
+        <div class="tagline">Commitment Initializer And Monitor</div>
       </div>
-    </div>
-
-    <div class="zone-block">
-      <div class="zone-header">
-        <span class="zone-icon">☀️</span>
-        <span class="zone-name">Flex Zone</span>
-        <span class="zone-time">Mid-morning → Afternoon</span>
-      </div>
-      <div class="task-input-row">
-        <input class="task-input" id="flex-input" placeholder="Add task or reactive item…" onkeydown="handleEnter(event,'flex')">
-        <button class="add-btn" onclick="addTask('flex')">+</button>
-      </div>
-      <div class="task-list" id="flex-tasks"></div>
-    </div>
-
-    <div class="zone-block">
-      <div class="capture-header">
-        <div class="zone-header" style="margin:0">
-          <span class="zone-icon">📝</span>
-          <span class="zone-name">Capture List</span>
+      <div class="header-right">
+        <div class="date-badge">
+          <div id="date-label">Loading…</div>
+          <span id="week-label"></span>
         </div>
-        <span class="capture-count" id="capture-count">0 items</span>
+        <div class="user-row">
+          <div class="user-avatar" id="user-avatar">?</div>
+          <span id="user-name">…</span>
+          <button class="signout-btn" onclick="signOut()">sign out</button>
+        </div>
       </div>
-      <p style="font-size:0.72rem;color:var(--muted);margin-bottom:10px;">Distracted? Write it here, keep working.</p>
-      <div class="task-input-row">
-        <input class="task-input" id="capture-input" placeholder="Capture the distraction…" onkeydown="if(event.key==='Enter')addCapture()">
-        <button class="add-btn" onclick="addCapture()" style="background:var(--accent2)">+</button>
-      </div>
-      <div id="capture-list" style="margin-top:10px;"></div>
     </div>
 
-    <div class="zone-block">
-      <div class="zone-header">
-        <span class="zone-icon">🌆</span>
-        <span class="zone-name">Wind-Down</span>
-        <span class="zone-time">Late Afternoon</span>
-      </div>
-      <div class="task-input-row">
-        <input class="task-input" id="wind-input" placeholder="Tomorrow's most important task…" onkeydown="handleEnter(event,'wind')">
-        <button class="add-btn" onclick="addTask('wind')" style="background:var(--accent3)">+</button>
-      </div>
-      <div class="task-list" id="wind-tasks"></div>
+    <div class="sync-bar">
+      <div class="sync-dot" id="sync-dot"></div>
+      <span class="sync-label" id="sync-label">Connecting…</span>
     </div>
 
-    <div class="zone-block">
-      <div class="zone-header">
-        <span class="zone-icon">🌙</span>
-        <span class="zone-name">Learning</span>
-        <span class="zone-time">Evening · 45–60 mins</span>
-      </div>
-      <div class="task-input-row">
-        <input class="task-input" id="learn-input" placeholder="What are you studying tonight?" onkeydown="handleEnter(event,'learn')">
-        <button class="add-btn" onclick="addTask('learn')" style="background:var(--learning)">+</button>
-      </div>
-      <div class="task-list" id="learn-tasks"></div>
+    <div class="tab-nav">
+      <button class="tab-btn active" onclick="showView('today', this)">Today</button>
+      <button class="tab-btn" onclick="showView('week', this)">Week</button>
+      <button class="tab-btn" onclick="showView('review', this)">Review</button>
     </div>
-  </div>
 
-  <!-- WEEK -->
-  <div id="view-week" class="view">
-    <div class="section-title">This Week</div>
-    <div class="week-grid" id="week-grid"></div>
-  </div>
+    <!-- TODAY -->
+    <div id="view-today" class="view active">
+      <div class="today-anchor" id="anchor-card">
+        <div class="anchor-label">⚓ Today's Anchor Block · 90 mins</div>
+        <div class="anchor-day" id="anchor-day-name">MONDAY</div>
+        <div class="anchor-title" id="anchor-title">GECO — Production</div>
+        <div class="anchor-desc" id="anchor-desc">Loading…</div>
+        <div class="anchor-status-row">
+          <button class="status-btn" id="btn-done" onclick="setAnchorStatus('done')"><span class="icon">✅</span>Completed</button>
+          <button class="status-btn" id="btn-partial" onclick="setAnchorStatus('partial')"><span class="icon">⚡</span>Partial</button>
+          <button class="status-btn" id="btn-missed" onclick="setAnchorStatus('missed')"><span class="icon">❌</span>Missed</button>
+        </div>
+      </div>
 
-  <!-- REVIEW -->
-  <div id="view-review" class="view">
-    <div class="streak-row">
-      <div class="streak-card"><div class="streak-num" id="streak-num">—</div><div class="streak-label">Day Streak</div></div>
-      <div class="streak-card"><div class="streak-num" id="completion-rate">—</div><div class="streak-label">Completion Rate</div></div>
+      <div class="zones-grid">
+        <div class="zone-block">
+          <div class="zone-header">
+            <span class="zone-icon">☀️</span>
+            <span class="zone-name">Flex Zone</span>
+            <span class="zone-time">Mid-morning → Afternoon</span>
+          </div>
+          <div class="task-input-row">
+            <input class="task-input" id="flex-input" placeholder="Add task or reactive item…" onkeydown="handleEnter(event,'flex')">
+            <button class="add-btn" onclick="addTask('flex')">+</button>
+          </div>
+          <div class="task-list" id="flex-tasks"></div>
+        </div>
+
+        <div class="zone-block">
+          <div class="capture-header">
+            <div class="zone-header" style="margin:0">
+              <span class="zone-icon">📝</span>
+              <span class="zone-name">Capture List</span>
+            </div>
+            <span class="capture-count" id="capture-count">0 items</span>
+          </div>
+          <p style="font-size:0.72rem;color:var(--muted);margin-bottom:10px;">Distracted? Write it here, keep working.</p>
+          <div class="task-input-row">
+            <input class="task-input" id="capture-input" placeholder="Capture the distraction…" onkeydown="if(event.key==='Enter')addCapture()">
+            <button class="add-btn" onclick="addCapture()" style="background:var(--accent2)">+</button>
+          </div>
+          <div id="capture-list" style="margin-top:10px;"></div>
+        </div>
+
+        <div class="zone-block">
+          <div class="zone-header">
+            <span class="zone-icon">🌆</span>
+            <span class="zone-name">Wind-Down</span>
+            <span class="zone-time">Late Afternoon</span>
+          </div>
+          <div class="task-input-row">
+            <input class="task-input" id="wind-input" placeholder="Tomorrow's most important task…" onkeydown="handleEnter(event,'wind')">
+            <button class="add-btn" onclick="addTask('wind')" style="background:var(--accent3)">+</button>
+          </div>
+          <div class="task-list" id="wind-tasks"></div>
+        </div>
+
+        <div class="zone-block">
+          <div class="zone-header">
+            <span class="zone-icon">🌙</span>
+            <span class="zone-name">Learning</span>
+            <span class="zone-time">Evening · 45–60 mins</span>
+          </div>
+          <div class="task-input-row">
+            <input class="task-input" id="learn-input" placeholder="What are you studying tonight?" onkeydown="handleEnter(event,'learn')">
+            <button class="add-btn" onclick="addTask('learn')" style="background:var(--learning)">+</button>
+          </div>
+          <div class="task-list" id="learn-tasks"></div>
+        </div>
+      </div>
     </div>
-    <div class="section-title">Domain Performance</div>
-    <div class="domain-bars" id="domain-bars"></div>
-    <div class="section-title" style="margin-top:20px;">Week History</div>
-    <div class="week-history" id="week-history"></div>
-    <div class="section-title" style="margin-top:4px;">Sunday Review</div>
-    <div class="review-q"><div class="review-q-text">1. What moved forward this week?</div><textarea class="review-textarea" id="review-q1" placeholder="GECO: …  Construction: …  Health: …  Learning: …"></textarea></div>
-    <div class="review-q"><div class="review-q-text">2. What kept stalling?</div><textarea class="review-textarea" id="review-q2" placeholder="Usually one thing…"></textarea></div>
-    <div class="review-q"><div class="review-q-text">3. Most important outcome per domain next week?</div><textarea class="review-textarea" id="review-q3" placeholder="GECO: …  Construction: …  Health: …  Learning: …"></textarea></div>
-    <div class="review-q"><div class="review-q-text">4. Does the anchor rotation still feel right?</div><textarea class="review-textarea" id="review-q4" placeholder="Any domain needing more days?"></textarea></div>
-    <button class="save-btn" onclick="saveReview()">SAVE REVIEW</button>
-  </div>
+
+    <!-- WEEK -->
+    <div id="view-week" class="view">
+      <div class="section-title">This Week</div>
+      <div class="week-grid" id="week-grid"></div>
+    </div>
+
+    <!-- REVIEW -->
+    <div id="view-review" class="view">
+      <div class="streak-row">
+        <div class="streak-card"><div class="streak-num" id="streak-num">—</div><div class="streak-label">Day Streak</div></div>
+        <div class="streak-card"><div class="streak-num" id="completion-rate">—</div><div class="streak-label">Completion Rate</div></div>
+      </div>
+      <div class="section-title">Domain Performance</div>
+      <div class="domain-bars" id="domain-bars"></div>
+      <div class="section-title" style="margin-top:20px;">Week History</div>
+      <div class="week-history" id="week-history"></div>
+      <div class="section-title" style="margin-top:4px;">Sunday Review</div>
+      <div class="review-questions-grid">
+        <div class="review-q"><div class="review-q-text">1. What moved forward this week?</div><textarea class="review-textarea" id="review-q1" placeholder="GECO: …  Construction: …  Health: …  Learning: …"></textarea></div>
+        <div class="review-q"><div class="review-q-text">2. What kept stalling?</div><textarea class="review-textarea" id="review-q2" placeholder="Usually one thing…"></textarea></div>
+        <div class="review-q"><div class="review-q-text">3. Most important outcome per domain next week?</div><textarea class="review-textarea" id="review-q3" placeholder="GECO: …  Construction: …  Health: …  Learning: …"></textarea></div>
+        <div class="review-q"><div class="review-q-text">4. Does the anchor rotation still feel right?</div><textarea class="review-textarea" id="review-q4" placeholder="Any domain needing more days?"></textarea></div>
+      </div>
+      <button class="save-btn" onclick="saveReview()">SAVE REVIEW</button>
+    </div>
+  </div><!-- /main-content -->
 </div>
 
 <div class="bottom-nav" id="bottom-nav" style="display:none;">
@@ -676,10 +832,14 @@ function handleAuthChange(user) {
     document.getElementById('auth-screen').style.display = 'none';
     document.getElementById('main-app').style.display = 'block';
     document.getElementById('bottom-nav').style.display = 'flex';
-    document.getElementById('user-name').textContent = user.displayName?.split(' ')[0] || 'You';
+    const firstName = user.displayName?.split(' ')[0] || 'You';
+    const avatarHtml = user.photoURL ? `<img src="${user.photoURL}">` : (user.displayName||'?')[0].toUpperCase();
+    document.getElementById('user-name').textContent = firstName;
     const avatar = document.getElementById('user-avatar');
-    if (user.photoURL) avatar.innerHTML = `<img src="${user.photoURL}">`;
-    else avatar.textContent = (user.displayName||'?')[0].toUpperCase();
+    if (user.photoURL) avatar.innerHTML = avatarHtml; else avatar.textContent = avatarHtml;
+    document.getElementById('user-name-sb').textContent = firstName;
+    const avatarSb = document.getElementById('user-avatar-sb');
+    if (user.photoURL) avatarSb.innerHTML = `<img src="${user.photoURL}">`; else avatarSb.textContent = (user.displayName||'?')[0].toUpperCase();
     initApp();
   } else {
     currentUser = null;
@@ -706,11 +866,9 @@ function userDoc(dateK) {
 }
 
 function setSyncState(state) {
-  const dot = document.getElementById('sync-dot');
-  const label = document.getElementById('sync-label');
-  dot.className = 'sync-dot ' + state;
   const msgs = { syncing:'Syncing…', synced:'Synced', error:'Sync error — check connection' };
-  label.textContent = msgs[state] || '';
+  ['sync-dot','sync-dot-sb'].forEach(id=>{ const el=document.getElementById(id); if(el) el.className='sync-dot '+state; });
+  ['sync-label','sync-label-sb'].forEach(id=>{ const el=document.getElementById(id); if(el) el.textContent=msgs[state]||''; });
 }
 
 async function loadDay(dateK) {
@@ -902,11 +1060,14 @@ function renderCaptures(ds) {
 }
 
 // ── WEEK VIEW ─────────────────────────────────────
-window.showView = async function(id, tabBtn, navId) {
+window.showView = async function(id, tabBtn, navId, sbId) {
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.getElementById('view-'+id).classList.add('active');
   if(tabBtn){ document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active')); tabBtn.classList.add('active'); }
   if(navId){ document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active')); document.getElementById(navId).classList.add('active'); }
+  const sbTarget = sbId || 'sb-'+id;
+  document.querySelectorAll('.sidebar-btn').forEach(b=>b.classList.remove('active'));
+  const sbEl = document.getElementById(sbTarget); if(sbEl) sbEl.classList.add('active');
   if(id==='week') await renderWeek();
   if(id==='review') await renderReview();
 };
