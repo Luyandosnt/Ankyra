@@ -1079,9 +1079,25 @@ function renderTasks(zone, ds) {
     <div class="task-item ${t.done?'done':''}" onclick="toggleTask('${zone}',${t.id})">
       <div class="task-check">${t.done?'✓':''}</div>
       <div class="task-text">${escHtml(t.text)}</div>
+      ${zone==='flex' ? `<button class="move-btn" onclick="event.stopPropagation();moveToWind(${t.id})" style="margin-right:4px">→ Wind</button>` : ''}
       <button class="task-del" onclick="event.stopPropagation();deleteTask('${zone}',${t.id})">✕</button>
     </div>`).join('');
 }
+
+window.moveToWind = async function(id) {
+  const dk = dateKey();
+  const ds = await loadDay(dk);
+  const task = ds.tasks.flex.find(t=>t.id===id);
+  if(task) {
+    if(!ds.tasks.wind) ds.tasks.wind = [];
+    ds.tasks.wind.push({...task, done:false});
+    ds.tasks.flex = ds.tasks.flex.filter(t=>t.id!==id);
+    await saveDay(dk, ds);
+    renderTasks('flex', ds);
+    renderTasks('wind', ds);
+    showToast('Moved to Wind-Down ✓');
+  }
+};
 
 // ── CAPTURES ──────────────────────────────────────
 window.addCapture = async function() {
