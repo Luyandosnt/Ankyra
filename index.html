@@ -393,7 +393,9 @@
     background: var(--bg);
     display: flex; align-items: center; justify-content: center;
     flex-direction: column; gap: 16px;
+    transition: opacity 0.5s ease;
   }
+  .loading-overlay.fade-out { opacity: 0; pointer-events: none; }
   .loading-logo { font-family: 'Bebas Neue', sans-serif; font-size: 3rem; color: var(--accent); letter-spacing: 0.1em; }
   .loading-dots { display: flex; gap: 6px; }
   .loading-dots span {
@@ -403,6 +405,44 @@
   .loading-dots span:nth-child(2) { animation-delay: 0.2s; }
   .loading-dots span:nth-child(3) { animation-delay: 0.4s; }
   @keyframes bounce { 0%,80%,100%{transform:scale(0.6);opacity:0.4} 40%{transform:scale(1);opacity:1} }
+
+  .welcome-msg {
+    display: none; flex-direction: column; align-items: center; gap: 6px;
+    animation: fadeInUp 0.5s ease forwards;
+  }
+  .welcome-msg.show { display: flex; }
+  .welcome-greeting { font-size: 0.8rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); }
+  .welcome-name { font-family: 'Bebas Neue', sans-serif; font-size: 2.2rem; letter-spacing: 0.08em; color: var(--text); }
+  @keyframes fadeInUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+
+  /* ── LANDING SCREEN ── */
+  #landing-screen {
+    position: fixed; inset: 0; z-index: 190;
+    background: var(--bg);
+    display: none; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 40px 28px; text-align: center;
+    opacity: 0; transition: opacity 0.4s ease;
+  }
+  #landing-screen.visible { opacity: 1; }
+  #landing-screen .logo-big {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 4rem; letter-spacing: 0.1em;
+    color: var(--accent); line-height: 1; margin-bottom: 6px;
+  }
+  #landing-screen .tagline-big {
+    font-size: 0.72rem; letter-spacing: 0.2em;
+    text-transform: uppercase; color: var(--muted); margin-bottom: 48px;
+  }
+  .signin-btn {
+    background: var(--accent); color: #000;
+    border: none; border-radius: 14px;
+    padding: 16px 48px;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.1rem; letter-spacing: 0.12em;
+    cursor: pointer; transition: opacity 0.2s, transform 0.15s;
+  }
+  .signin-btn:active { transform: scale(0.97); opacity: 0.85; }
 
   /* ── MOBILE: hide tab nav, show bottom nav ── */
   .tab-nav { display: none; }
@@ -526,10 +566,23 @@
 </head>
 <body>
 
-<!-- Loading -->
+<!-- Loading / Welcome overlay -->
 <div class="loading-overlay" id="loading-overlay">
-  <div class="loading-logo">ANKYRA v1</div>
-  <div class="loading-dots"><span></span><span></span><span></span></div>
+  <div id="loading-logo-block">
+    <div class="loading-logo">ANKYRA v1</div>
+    <div class="loading-dots"><span></span><span></span><span></span></div>
+  </div>
+  <div class="welcome-msg" id="welcome-msg">
+    <div class="welcome-greeting">Welcome back</div>
+    <div class="welcome-name" id="welcome-name">—</div>
+  </div>
+</div>
+
+<!-- Landing screen (not signed in) -->
+<div id="landing-screen">
+  <div class="logo-big">ANKYRA v1</div>
+  <div class="tagline-big">Commitment Initializer And Monitor</div>
+  <button class="signin-btn" onclick="showAuthScreen()">Sign In</button>
 </div>
 
 <!-- Config needed screen -->
@@ -819,29 +872,54 @@ function initFirebase() {
   }
 }
 
+function fadeOutOverlay(cb) {
+  const overlay = document.getElementById('loading-overlay');
+  overlay.classList.add('fade-out');
+  setTimeout(() => { overlay.style.display = 'none'; overlay.classList.remove('fade-out'); if(cb) cb(); }, 500);
+}
+
 function handleAuthChange(user) {
-  document.getElementById('loading-overlay').style.display = 'none';
   if (user) {
     currentUser = user;
-    document.getElementById('auth-screen').style.display = 'none';
-    document.getElementById('main-app').style.display = 'block';
-    document.getElementById('bottom-nav').style.display = 'flex';
     const firstName = user.displayName?.split(' ')[0] || 'You';
     const avatarHtml = user.photoURL ? `<img src="${user.photoURL}">` : (user.displayName||'?')[0].toUpperCase();
+    // Populate user info
     document.getElementById('user-name').textContent = firstName;
     const avatar = document.getElementById('user-avatar');
     if (user.photoURL) avatar.innerHTML = avatarHtml; else avatar.textContent = avatarHtml;
     document.getElementById('user-name-sb').textContent = firstName;
     const avatarSb = document.getElementById('user-avatar-sb');
     if (user.photoURL) avatarSb.innerHTML = `<img src="${user.photoURL}">`; else avatarSb.textContent = (user.displayName||'?')[0].toUpperCase();
-    initApp();
+    // Show welcome message then open app
+    document.getElementById('loading-logo-block').style.display = 'none';
+    document.getElementById('welcome-name').textContent = firstName;
+    document.getElementById('welcome-msg').classList.add('show');
+    setTimeout(() => {
+      fadeOutOverlay(() => {
+        document.getElementById('auth-screen').style.display = 'none';
+        document.getElementById('landing-screen').style.display = 'none';
+        document.getElementById('main-app').style.display = 'block';
+        document.getElementById('bottom-nav').style.display = 'flex';
+        initApp();
+      });
+    }, 1400);
   } else {
     currentUser = null;
-    document.getElementById('auth-screen').style.display = 'flex';
+    // Fade out overlay, show landing screen
+    fadeOutOverlay(() => {
+      const landing = document.getElementById('landing-screen');
+      landing.style.display = 'flex';
+      requestAnimationFrame(() => landing.classList.add('visible'));
+    });
     document.getElementById('main-app').style.display = 'none';
     document.getElementById('bottom-nav').style.display = 'none';
   }
 }
+
+window.showAuthScreen = function() {
+  document.getElementById('landing-screen').style.display = 'none';
+  document.getElementById('auth-screen').style.display = 'flex';
+};
 
 window.signInWithGoogle = async function() {
   const provider = new GoogleAuthProvider();
