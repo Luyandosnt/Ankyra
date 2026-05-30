@@ -1205,39 +1205,8 @@ async function addToBin(task, zone, fromDate) {
   await saveBin(items);
 }
 
-// ── CARRY OVER INCOMPLETE TASKS ───────────────────
-// Wind-down tasks shown in carry-over section; deleted IDs are skipped
-async function carryOverIncompleteTasks(todayKey, todayData) {
-  // Collect deleted IDs from both the bin AND each day's deletedIds array
-  const binItems = await loadBin();
-  const deletedIds = new Set(binItems.map(b => b.id));
-  // Also add today's own deletedIds
-  (todayData.deletedIds || []).forEach(id => deletedIds.add(id));
-
-  const existingIds = new Set();
-  ['flex','learn'].forEach(z => (todayData.tasks[z]||[]).forEach(t => existingIds.add(t.id)));
-
-  let modified = false;
-  for (let i = 1; i <= 7; i++) {
-    const d = new Date(); d.setDate(d.getDate() - i);
-    const prevKey = d.toISOString().split('T')[0];
-    const prevData = await loadDay(prevKey);
-    // Absorb that day's deleted IDs too
-    (prevData?.deletedIds || []).forEach(id => deletedIds.add(id));
-    ['flex','learn'].forEach(z => {
-      (prevData?.tasks?.[z] || [])
-        .filter(t => !t.done && !existingIds.has(t.id) && !deletedIds.has(t.id))
-        .forEach(t => {
-          if (!todayData.tasks[z]) todayData.tasks[z] = [];
-          todayData.tasks[z].push({ ...t, carried: true });
-          existingIds.add(t.id);
-          modified = true;
-        });
-    });
-  }
-  if (modified) await saveDay(todayKey, todayData);
-  return todayData;
-}
+// Each day starts fresh — no flex/learn carry-over.
+// Only the dedicated Carry Over section (yesterday's undone wind-down) pre-fills.
 
 // ── YESTERDAY'S WIND-DOWN CARRY OVER ──────────────
 async function loadCarryOver() {
@@ -1306,8 +1275,7 @@ async function initApp() {
   mondayDate.setDate(today.getDate()+(today.getDay()===0?-6:1-today.getDay()));
   document.getElementById('week-label').textContent = 'Wk '+mondayDate.toLocaleDateString('en-GB',{day:'numeric',month:'short'});
 
-  let ds = await loadDay(dateKey());
-  ds = await carryOverIncompleteTasks(dateKey(), ds);
+  const ds = await loadDay(dateKey());
   setSyncState('synced');
 
   if (ds.anchorStatus) applyAnchorStatus(ds.anchorStatus);
