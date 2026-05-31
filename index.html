@@ -490,6 +490,34 @@
   .cr-update-btn { background:var(--learning); border:none; border-radius:8px; padding:8px 14px; color:#000; font-size:0.78rem; font-weight:600; cursor:pointer; transition:opacity 0.2s; }
   .cr-change-btn { background:none; border:1px solid var(--border); border-radius:8px; padding:6px 10px; color:var(--muted); font-size:0.72rem; cursor:pointer; margin-top:2px; }
 
+  /* ── DAY DETAIL MODAL ── */
+  .day-modal {
+    position:fixed; inset:0; z-index:400;
+    background:rgba(0,0,0,0.75); backdrop-filter:blur(6px);
+    display:flex; align-items:flex-end; justify-content:center;
+    padding:0;
+  }
+  .day-modal-card {
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:20px 20px 0 0; padding:24px 20px 40px;
+    width:100%; max-width:600px; max-height:85vh; overflow-y:auto;
+    animation: slideUp 0.3s cubic-bezier(0.16,1,0.3,1);
+  }
+  @keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
+  .day-modal-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; }
+  .day-modal-title { font-family:'Bebas Neue',sans-serif; font-size:1.4rem; letter-spacing:0.06em; }
+  .day-modal-close { background:none; border:1px solid var(--border); border-radius:8px; padding:6px 12px; color:var(--muted); cursor:pointer; font-size:0.78rem; }
+  .day-modal-section { margin-bottom:16px; }
+  .day-modal-section-title { font-size:0.65rem; letter-spacing:0.15em; text-transform:uppercase; color:var(--muted); margin-bottom:8px; display:flex; align-items:center; gap:6px; }
+  .day-modal-section-title::after { content:''; flex:1; height:1px; background:var(--border); }
+  .day-modal-task { display:flex; align-items:center; gap:8px; padding:7px 10px; background:var(--surface2); border-radius:8px; font-size:0.82rem; margin-bottom:5px; }
+  .day-modal-task.done-task { opacity:0.5; }
+  .day-modal-task.done-task span { text-decoration:line-through; }
+  .day-modal-check { font-size:0.75rem; color:var(--success); width:16px; flex-shrink:0; }
+  .day-modal-empty { font-size:0.75rem; color:var(--muted); font-style:italic; padding:4px 10px; }
+  .hist-dot { cursor:pointer; transition:transform 0.15s; }
+  .hist-dot:hover { transform:scale(1.1); }
+
   /* ── COMPLETION MODAL ── */
   .completion-modal {
     position:fixed; inset:0; z-index:400;
@@ -975,6 +1003,17 @@
   </div><!-- /main-content -->
 </div>
 
+<!-- Day Detail Modal -->
+<div class="day-modal" id="day-modal" style="display:none;" onclick="closeDayModal(event)">
+  <div class="day-modal-card">
+    <div class="day-modal-header">
+      <div class="day-modal-title" id="day-modal-title">—</div>
+      <button class="day-modal-close" onclick="document.getElementById('day-modal').style.display='none'">Close</button>
+    </div>
+    <div id="day-modal-body"></div>
+  </div>
+</div>
+
 <!-- Completion Modal -->
 <div class="completion-modal" id="completion-modal" style="display:none;">
   <div class="completion-card">
@@ -1208,31 +1247,33 @@ async function addToBin(task, zone, fromDate) {
 // Each day starts fresh — no flex/learn carry-over.
 // Only the dedicated Carry Over section (yesterday's undone wind-down) pre-fills.
 
-// ── WIND-DOWN CARRY OVER (rolls forward; tick = strikethrough, X = remove) ──
+// ── WIND-DOWN CARRY OVER ──────────────────────────
+// Only undone tasks roll forward. Ticking marks done on source day → disappears from carry-over.
+// Source day record stays intact for historical review.
 async function loadCarryOver() {
   const section = document.getElementById('carryover-section');
   const binItems = await loadBin();
   const deletedIds = new Set(binItems.map(b => b.id));
   const seenIds = new Set();
-  const allItems = []; // { task, sourceKey } — done AND undone
+  const undone = []; // { task, sourceKey }
 
   for (let i = 1; i <= 30; i++) {
     const d = new Date(); d.setDate(d.getDate() - i);
     const key = d.toISOString().split('T')[0];
     const data = await loadDay(key);
     (data?.tasks?.wind || []).forEach(t => {
-      if (!deletedIds.has(t.id) && !seenIds.has(t.id)) {
+      if (!t.done && !deletedIds.has(t.id) && !seenIds.has(t.id)) {
         seenIds.add(t.id);
-        allItems.push({ task: t, sourceKey: key });
+        undone.push({ task: t, sourceKey: key });
       }
     });
   }
 
-  if (!allItems.length) { section.style.display = 'none'; return; }
+  if (!undone.length) { section.style.display = 'none'; return; }
   section.style.display = 'block';
-  document.getElementById('carryover-list').innerHTML = allItems.map(({ task: t, sourceKey }) => `
-    <div class="carryover-item ${t.done ? 'done-co' : ''}" id="co-item-${t.id}">
-      <div class="co-check" onclick="toggleCarryOver('${sourceKey}',${t.id})">${t.done ? '✓' : ''}</div>
+  document.getElementById('carryover-list').innerHTML = undone.map(({ task: t, sourceKey }) => `
+    <div class="carryover-item" id="co-item-${t.id}">
+      <div class="co-check" onclick="toggleCarryOver('${sourceKey}',${t.id})"></div>
       <div class="co-text">${escHtml(t.text)}</div>
       <button class="move-btn" onclick="moveCarryOverToFlex('${sourceKey}',${t.id})">→ Flex</button>
       <button class="move-btn" onclick="moveCarryOverToWind('${sourceKey}',${t.id})" style="margin-left:4px">→ Wind</button>
@@ -1249,10 +1290,10 @@ window.deleteCarryOverItem = async function(sourceKey, id) {
   await loadCarryOver();
 };
 
-window.toggleCarryOver = async function(ydKey, id) {
-  const ds = await loadDay(ydKey);
-  const t = ds.tasks.wind.find(t=>t.id===id);
-  if(t) { t.done = !t.done; await saveDay(ydKey, ds); loadCarryOver(); }
+window.toggleCarryOver = async function(sourceKey, id) {
+  const ds = await loadDay(sourceKey);
+  const t = (ds?.tasks?.wind || []).find(t => t.id === id);
+  if (t) { t.done = true; await saveDay(sourceKey, ds); await loadCarryOver(); }
 };
 
 window.moveCarryOverToFlex = async function(ydKey, id) {
@@ -1533,14 +1574,15 @@ async function renderReview() {
     </div>`;
   }).join('');
 
-  // History dots
+  // History dots — clickable to view that day's detail
   document.getElementById('week-history').innerHTML = Array.from({length:14},(_,i)=>{
     const dd=new Date(); dd.setDate(dd.getDate()-(13-i));
     const k=dd.toISOString().split('T')[0];
     const s=localCache[k]?.anchorStatus;
     const cls=s==='done'?'done':s==='partial'?'partial':s==='missed'?'missed':'';
     const icon=s==='done'?'✅':s==='partial'?'⚡':s==='missed'?'❌':dd.toLocaleDateString('en-GB',{day:'numeric'});
-    return `<div class="hist-dot ${cls}">${icon}</div>`;
+    const label=dd.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
+    return `<div class="hist-dot ${cls}" title="${label}" onclick="openDayDetail('${k}','${label}')">${icon}</div>`;
   }).join('');
 
   // Load review answers
@@ -1750,6 +1792,63 @@ window.deleteBook = async function(id) {
   await saveLibrary(books.filter(b=>b.id!==id));
   renderLibraryBooks();
   showToast('Book removed');
+};
+
+// ── DAY DETAIL ────────────────────────────────────
+window.openDayDetail = async function(dateK, label) {
+  const ds = await loadDay(dateK);
+  document.getElementById('day-modal-title').textContent = label;
+
+  const anchorStatus = ds?.anchorStatus;
+  const statusLabel = anchorStatus === 'done' ? '✅ Completed' : anchorStatus === 'partial' ? '⚡ Partial' : anchorStatus === 'missed' ? '❌ Missed' : '— Not logged';
+
+  function taskList(tasks) {
+    if (!tasks?.length) return `<div class="day-modal-empty">Nothing logged</div>`;
+    return tasks.map(t => `
+      <div class="day-modal-task ${t.done ? 'done-task' : ''}">
+        <span class="day-modal-check">${t.done ? '✓' : '○'}</span>
+        <span>${escHtml(t.text)}</span>
+      </div>`).join('');
+  }
+
+  function captureList(items) {
+    if (!items?.length) return `<div class="day-modal-empty">Nothing captured</div>`;
+    return items.map(c => `
+      <div class="day-modal-task">
+        <span class="day-modal-check">📝</span>
+        <span>${escHtml(c.text)}</span>
+      </div>`).join('');
+  }
+
+  document.getElementById('day-modal-body').innerHTML = `
+    <div class="day-modal-section">
+      <div class="day-modal-section-title">⚓ Anchor Block</div>
+      <div class="day-modal-task"><span>${statusLabel}</span></div>
+    </div>
+    <div class="day-modal-section">
+      <div class="day-modal-section-title">☀️ Flex Zone</div>
+      ${taskList(ds?.tasks?.flex)}
+    </div>
+    <div class="day-modal-section">
+      <div class="day-modal-section-title">🌆 Wind-Down</div>
+      ${taskList(ds?.tasks?.wind)}
+    </div>
+    <div class="day-modal-section">
+      <div class="day-modal-section-title">🌙 Learning & Night Shift</div>
+      ${taskList(ds?.tasks?.learn)}
+    </div>
+    <div class="day-modal-section">
+      <div class="day-modal-section-title">📝 Capture List</div>
+      ${captureList(ds?.captures)}
+    </div>`;
+
+  document.getElementById('day-modal').style.display = 'flex';
+};
+
+window.closeDayModal = function(e) {
+  if (e.target === document.getElementById('day-modal')) {
+    document.getElementById('day-modal').style.display = 'none';
+  }
 };
 
 // ── BIN VIEW ──────────────────────────────────────
