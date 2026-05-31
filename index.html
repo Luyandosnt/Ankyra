@@ -847,14 +847,14 @@
         </div>
       </div>
 
-      <!-- Previous Day Carry Over -->
+      <!-- Carry Over -->
       <div class="zone-block carryover-block" id="carryover-section" style="display:none;">
         <div class="zone-header">
           <span class="zone-icon">🔁</span>
-          <span class="zone-name">Yesterday's Wind-Down</span>
-          <span class="zone-time" style="color:var(--accent2);">Carry Over</span>
+          <span class="zone-name">Carry Over</span>
+          <span class="zone-time" style="color:var(--accent2);">Unfinished</span>
         </div>
-        <p style="font-size:0.72rem;color:var(--muted);margin-bottom:10px;">These didn't get done yesterday. Deal with them first.</p>
+        <p style="font-size:0.72rem;color:var(--muted);margin-bottom:10px;">Undone tasks from Wind-Down &amp; Night Shift. Deal with them first.</p>
         <div id="carryover-list"></div>
       </div>
 
@@ -903,8 +903,21 @@
 
         <div class="zone-block">
           <div class="zone-header">
+            <span class="zone-icon">🌃</span>
+            <span class="zone-name">Night Shift</span>
+            <span class="zone-time">Evening · Work Block</span>
+          </div>
+          <div class="task-input-row">
+            <input class="task-input" id="night-input" placeholder="Add night shift task…" onkeydown="handleEnter(event,'night')">
+            <button class="add-btn" onclick="addTask('night')" style="background:var(--geco)">+</button>
+          </div>
+          <div class="task-list" id="night-tasks"></div>
+        </div>
+
+        <div class="zone-block" style="grid-column:1/-1;">
+          <div class="zone-header">
             <span class="zone-icon">🌙</span>
-            <span class="zone-name">Learning & Night Shift</span>
+            <span class="zone-name">Learning</span>
             <span class="zone-time">Evening · 45–60 mins</span>
           </div>
           <div class="task-input-row">
@@ -1216,7 +1229,7 @@ async function saveDay(dateK, data) {
 }
 
 function defaultDay() {
-  return { anchorStatus: null, tasks: { flex:[], wind:[], learn:[] }, captures: [], deletedIds: [] };
+  return { anchorStatus: null, tasks: { flex:[], wind:[], night:[], learn:[] }, captures: [], deletedIds: [] };
 }
 
 // ── BIN ───────────────────────────────────────────
@@ -1263,63 +1276,67 @@ async function loadCarryOver() {
     const d = new Date(); d.setDate(d.getDate() - i);
     const key = d.toISOString().split('T')[0];
     const data = await loadDay(key);
-    (data?.tasks?.wind || []).forEach(t => {
-      if (!t.done && !deletedIds.has(t.id) && !seenIds.has(t.id)) {
-        seenIds.add(t.id);
-        undone.push({ task: t, sourceKey: key });
-      }
+    ['wind','night'].forEach(zone => {
+      (data?.tasks?.[zone] || []).forEach(t => {
+        if (!t.done && !deletedIds.has(t.id) && !seenIds.has(t.id)) {
+          seenIds.add(t.id);
+          undone.push({ task: t, sourceKey: key, sourceZone: zone });
+        }
+      });
     });
   }
 
   if (!undone.length) { section.style.display = 'none'; return; }
   section.style.display = 'block';
-  document.getElementById('carryover-list').innerHTML = undone.map(({ task: t, sourceKey }) => `
+  const zoneLabel = { wind:'🌆 Wind', night:'🌃 Night' };
+  document.getElementById('carryover-list').innerHTML = undone.map(({ task: t, sourceKey, sourceZone }) => `
     <div class="carryover-item" id="co-item-${t.id}">
-      <div class="co-check" onclick="toggleCarryOver('${sourceKey}',${t.id})"></div>
-      <div class="co-text">${escHtml(t.text)}</div>
-      <button class="move-btn" onclick="moveCarryOverToFlex('${sourceKey}',${t.id})">→ Flex</button>
-      <button class="move-btn" onclick="moveCarryOverToWind('${sourceKey}',${t.id})" style="margin-left:4px">→ Wind</button>
-      <button class="task-del" onclick="deleteCarryOverItem('${sourceKey}',${t.id})" style="margin-left:4px">✕</button>
+      <div class="co-check" onclick="toggleCarryOver('${sourceKey}','${sourceZone}',${t.id})"></div>
+      <div class="co-text">${escHtml(t.text)}<span style="font-size:0.65rem;color:var(--muted);margin-left:6px;">${zoneLabel[sourceZone]||''}</span></div>
+      <button class="move-btn" onclick="moveCarryOverToFlex('${sourceKey}','${sourceZone}',${t.id})">→ Flex</button>
+      <button class="move-btn" onclick="moveCarryOverToNight('${sourceKey}','${sourceZone}',${t.id})" style="margin-left:4px">→ Night</button>
+      <button class="task-del" onclick="deleteCarryOverItem('${sourceKey}','${sourceZone}',${t.id})" style="margin-left:4px">✕</button>
     </div>`).join('');
 }
 
-window.deleteCarryOverItem = async function(sourceKey, id) {
+window.deleteCarryOverItem = async function(sourceKey, sourceZone, id) {
   const ds = await loadDay(sourceKey);
-  const task = (ds?.tasks?.wind || []).find(t => t.id === id);
-  if (task) await addToBin(task, 'wind', sourceKey);
-  if (ds?.tasks?.wind) ds.tasks.wind = ds.tasks.wind.filter(t => t.id !== id);
+  const task = (ds?.tasks?.[sourceZone] || []).find(t => t.id === id);
+  if (task) await addToBin(task, sourceZone, sourceKey);
+  if (ds?.tasks?.[sourceZone]) ds.tasks[sourceZone] = ds.tasks[sourceZone].filter(t => t.id !== id);
   await saveDay(sourceKey, ds);
   await loadCarryOver();
 };
 
-window.toggleCarryOver = async function(sourceKey, id) {
+window.toggleCarryOver = async function(sourceKey, sourceZone, id) {
   const ds = await loadDay(sourceKey);
-  const t = (ds?.tasks?.wind || []).find(t => t.id === id);
+  const t = (ds?.tasks?.[sourceZone] || []).find(t => t.id === id);
   if (t) { t.done = true; await saveDay(sourceKey, ds); await loadCarryOver(); }
 };
 
-window.moveCarryOverToFlex = async function(ydKey, id) {
+window.moveCarryOverToFlex = async function(sourceKey, sourceZone, id) {
   const dk = dateKey();
-  const [ydData, todayData] = await Promise.all([loadDay(ydKey), loadDay(dk)]);
-  const t = ydData.tasks.wind.find(t=>t.id===id);
-  if(t) {
+  const [srcData, todayData] = await Promise.all([loadDay(sourceKey), loadDay(dk)]);
+  const t = (srcData?.tasks?.[sourceZone] || []).find(t => t.id === id);
+  if (t) {
+    if(!todayData.tasks.flex) todayData.tasks.flex=[];
     todayData.tasks.flex.push({...t, done:false, carried:true});
-    ydData.tasks.wind = ydData.tasks.wind.filter(t=>t.id!==id);
-    await Promise.all([saveDay(ydKey, ydData), saveDay(dk, todayData)]);
-    loadCarryOver(); renderTasks('flex', todayData); showToast('Moved to Flex Zone ✓');
+    srcData.tasks[sourceZone] = srcData.tasks[sourceZone].filter(t => t.id !== id);
+    await Promise.all([saveDay(sourceKey, srcData), saveDay(dk, todayData)]);
+    await loadCarryOver(); renderTasks('flex', todayData); showToast('Moved to Flex Zone ✓');
   }
 };
 
-window.moveCarryOverToWind = async function(ydKey, id) {
+window.moveCarryOverToNight = async function(sourceKey, sourceZone, id) {
   const dk = dateKey();
-  const [ydData, todayData] = await Promise.all([loadDay(ydKey), loadDay(dk)]);
-  const t = ydData.tasks.wind.find(t=>t.id===id);
-  if(t) {
-    if(!todayData.tasks.wind) todayData.tasks.wind=[];
-    todayData.tasks.wind.push({...t, done:false, carried:true});
-    ydData.tasks.wind = ydData.tasks.wind.filter(t=>t.id!==id);
-    await Promise.all([saveDay(ydKey, ydData), saveDay(dk, todayData)]);
-    loadCarryOver(); renderTasks('wind', todayData); showToast("Added to today's Wind-Down ✓");
+  const [srcData, todayData] = await Promise.all([loadDay(sourceKey), loadDay(dk)]);
+  const t = (srcData?.tasks?.[sourceZone] || []).find(t => t.id === id);
+  if (t) {
+    if(!todayData.tasks.night) todayData.tasks.night=[];
+    todayData.tasks.night.push({...t, done:false, carried:true});
+    srcData.tasks[sourceZone] = srcData.tasks[sourceZone].filter(t => t.id !== id);
+    await Promise.all([saveDay(sourceKey, srcData), saveDay(dk, todayData)]);
+    await loadCarryOver(); renderTasks('night', todayData); showToast("Added to Night Shift ✓");
   }
 };
 
@@ -1345,7 +1362,7 @@ async function initApp() {
   setSyncState('synced');
 
   if (ds.anchorStatus) applyAnchorStatus(ds.anchorStatus);
-  ['flex','wind','learn'].forEach(z => renderTasks(z, ds));
+  ['flex','wind','night','learn'].forEach(z => renderTasks(z, ds));
   renderCaptures(ds);
   await loadCarryOver();
   await renderCurrentRead();
@@ -1411,7 +1428,9 @@ function renderTasks(zone, ds) {
     <div class="task-item ${t.done?'done':''}" onclick="toggleTask('${zone}',${t.id})">
       <div class="task-check">${t.done?'✓':''}</div>
       <div class="task-text">${escHtml(t.text)}</div>
-      ${zone==='flex' ? `<button class="move-btn" onclick="event.stopPropagation();moveToWind(${t.id})" style="margin-right:4px">→ Wind</button>` : ''}
+      ${zone==='flex'  ? `<button class="move-btn" onclick="event.stopPropagation();moveToWind(${t.id})" style="margin-right:4px">→ Wind</button>` : ''}
+      ${zone==='wind'  ? `<button class="move-btn" onclick="event.stopPropagation();moveToNight(${t.id})" style="margin-right:4px">→ Night</button>` : ''}
+      ${zone==='night' ? `<button class="move-btn" onclick="event.stopPropagation();moveToWind(${t.id})" style="margin-right:4px">→ Wind</button>` : ''}
       <button class="task-del" onclick="event.stopPropagation();deleteTask('${zone}',${t.id})">✕</button>
     </div>`).join('');
 }
@@ -1419,15 +1438,32 @@ function renderTasks(zone, ds) {
 window.moveToWind = async function(id) {
   const dk = dateKey();
   const ds = await loadDay(dk);
-  const task = ds.tasks.flex.find(t=>t.id===id);
+  // find task in flex or night
+  const srcZone = (ds.tasks.flex||[]).find(t=>t.id===id) ? 'flex' : 'night';
+  const task = (ds.tasks[srcZone]||[]).find(t=>t.id===id);
   if(task) {
     if(!ds.tasks.wind) ds.tasks.wind = [];
     ds.tasks.wind.push({...task, done:false});
-    ds.tasks.flex = ds.tasks.flex.filter(t=>t.id!==id);
+    ds.tasks[srcZone] = ds.tasks[srcZone].filter(t=>t.id!==id);
     await saveDay(dk, ds);
-    renderTasks('flex', ds);
+    renderTasks(srcZone, ds);
     renderTasks('wind', ds);
     showToast('Moved to Wind-Down ✓');
+  }
+};
+
+window.moveToNight = async function(id) {
+  const dk = dateKey();
+  const ds = await loadDay(dk);
+  const task = (ds.tasks.wind||[]).find(t=>t.id===id);
+  if(task) {
+    if(!ds.tasks.night) ds.tasks.night = [];
+    ds.tasks.night.push({...task, done:false});
+    ds.tasks.wind = ds.tasks.wind.filter(t=>t.id!==id);
+    await saveDay(dk, ds);
+    renderTasks('wind', ds);
+    renderTasks('night', ds);
+    showToast('Moved to Night Shift ✓');
   }
 };
 
@@ -1847,7 +1883,11 @@ window.openDayDetail = async function(dateK, label) {
       ${taskList(ds?.tasks?.wind)}
     </div>
     <div class="day-modal-section">
-      <div class="day-modal-section-title">🌙 Learning & Night Shift</div>
+      <div class="day-modal-section-title">🌃 Night Shift</div>
+      ${taskList(ds?.tasks?.night)}
+    </div>
+    <div class="day-modal-section">
+      <div class="day-modal-section-title">🌙 Learning</div>
       ${taskList(ds?.tasks?.learn)}
     </div>
     <div class="day-modal-section">
