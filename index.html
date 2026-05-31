@@ -979,6 +979,8 @@
     <div id="view-week" class="view">
       <div class="section-title">This Week</div>
       <div class="week-grid" id="week-grid"></div>
+      <div class="section-title" style="margin-top:20px;">History</div>
+      <div class="week-history" id="week-history"></div>
     </div>
 
     <!-- REVIEW -->
@@ -987,11 +989,11 @@
         <div class="streak-card"><div class="streak-num" id="streak-num">—</div><div class="streak-label">Day Streak</div></div>
         <div class="streak-card"><div class="streak-num" id="completion-rate">—</div><div class="streak-label">Completion Rate</div></div>
       </div>
+      <div class="section-title">Anchor Status · Last 14 Days</div>
+      <div id="review-anchor-strip" style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:20px;"></div>
       <div class="section-title">Domain Performance</div>
       <div class="domain-bars" id="domain-bars"></div>
-      <div class="section-title" style="margin-top:20px;">Week History</div>
-      <div class="week-history" id="week-history"></div>
-      <div class="section-title" style="margin-top:4px;">Sunday Review</div>
+      <div class="section-title" style="margin-top:20px;">Sunday Review</div>
       <div class="review-questions-grid">
         <div class="review-q"><div class="review-q-text">1. What moved forward this week?</div><textarea class="review-textarea" id="review-q1" placeholder="GECO: …  Construction: …  Health: …  Learning: …"></textarea></div>
         <div class="review-q"><div class="review-q-text">2. What kept stalling?</div><textarea class="review-textarea" id="review-q2" placeholder="Usually one thing…"></textarea></div>
@@ -1505,10 +1507,11 @@ async function renderWeek() {
     const d = DAYS[dayIdx];
     const status = dayData[i]?.anchorStatus || null;
     const isToday = key===todayK;
+    const label = new Date(key).toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
     return `
       <div class="week-row ${isToday?'today-row':''}" style="--day-color:${d.color}">
-        <div class="week-day-name">${d.name}</div>
-        <div class="week-domain">
+        <div class="week-day-name" style="cursor:pointer" onclick="openDayDetail('${key}','${label}')">${d.name}</div>
+        <div class="week-domain" style="cursor:pointer" onclick="openDayDetail('${key}','${label}')">
           <div class="week-domain-name">${d.icon} ${d.domain}</div>
           <div class="week-domain-sub">${isToday?'← TODAY':''}</div>
         </div>
@@ -1518,6 +1521,17 @@ async function renderWeek() {
           <div class="mini-status ${status==='missed'?'sel-missed':''}" onclick="setWeekStatus('${key}','missed')">❌</div>
         </div>
       </div>`;
+  }).join('');
+
+  // Clickable 14-day history dots
+  document.getElementById('week-history').innerHTML = Array.from({length:14},(_,i)=>{
+    const dd=new Date(); dd.setDate(dd.getDate()-(13-i));
+    const k=dd.toISOString().split('T')[0];
+    const s=localCache[k]?.anchorStatus;
+    const cls=s==='done'?'done':s==='partial'?'partial':s==='missed'?'missed':'';
+    const icon=s==='done'?'✅':s==='partial'?'⚡':s==='missed'?'❌':dd.toLocaleDateString('en-GB',{day:'numeric'});
+    const label=dd.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
+    return `<div class="hist-dot ${cls}" title="${label}" onclick="openDayDetail('${k}','${label}')">${icon}</div>`;
   }).join('');
 }
 
@@ -1574,15 +1588,14 @@ async function renderReview() {
     </div>`;
   }).join('');
 
-  // History dots — clickable to view that day's detail
-  document.getElementById('week-history').innerHTML = Array.from({length:14},(_,i)=>{
+  // Non-interactive anchor strip for Review
+  document.getElementById('review-anchor-strip').innerHTML = Array.from({length:14},(_,i)=>{
     const dd=new Date(); dd.setDate(dd.getDate()-(13-i));
     const k=dd.toISOString().split('T')[0];
     const s=localCache[k]?.anchorStatus;
     const cls=s==='done'?'done':s==='partial'?'partial':s==='missed'?'missed':'';
     const icon=s==='done'?'✅':s==='partial'?'⚡':s==='missed'?'❌':dd.toLocaleDateString('en-GB',{day:'numeric'});
-    const label=dd.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
-    return `<div class="hist-dot ${cls}" title="${label}" onclick="openDayDetail('${k}','${label}')">${icon}</div>`;
+    return `<div class="hist-dot ${cls}" style="cursor:default">${icon}</div>`;
   }).join('');
 
   // Load review answers
