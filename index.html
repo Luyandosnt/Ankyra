@@ -1208,37 +1208,46 @@ async function addToBin(task, zone, fromDate) {
 // Each day starts fresh — no flex/learn carry-over.
 // Only the dedicated Carry Over section (yesterday's undone wind-down) pre-fills.
 
-// ── WIND-DOWN CARRY OVER (rolls forward until done) ──
+// ── WIND-DOWN CARRY OVER (rolls forward; tick = strikethrough, X = remove) ──
 async function loadCarryOver() {
   const section = document.getElementById('carryover-section');
   const binItems = await loadBin();
   const deletedIds = new Set(binItems.map(b => b.id));
   const seenIds = new Set();
-  const allUndone = []; // { task, sourceKey }
+  const allItems = []; // { task, sourceKey } — done AND undone
 
-  // Look back up to 30 days, collect undone wind-down tasks
   for (let i = 1; i <= 30; i++) {
     const d = new Date(); d.setDate(d.getDate() - i);
     const key = d.toISOString().split('T')[0];
     const data = await loadDay(key);
     (data?.tasks?.wind || []).forEach(t => {
-      if (!t.done && !deletedIds.has(t.id) && !seenIds.has(t.id)) {
+      if (!deletedIds.has(t.id) && !seenIds.has(t.id)) {
         seenIds.add(t.id);
-        allUndone.push({ task: t, sourceKey: key });
+        allItems.push({ task: t, sourceKey: key });
       }
     });
   }
 
-  if (!allUndone.length) { section.style.display = 'none'; return; }
+  if (!allItems.length) { section.style.display = 'none'; return; }
   section.style.display = 'block';
-  document.getElementById('carryover-list').innerHTML = allUndone.map(({ task: t, sourceKey }) => `
-    <div class="carryover-item ${t.done?'done-co':''}" id="co-item-${t.id}">
-      <div class="co-check" onclick="toggleCarryOver('${sourceKey}',${t.id})">${t.done?'✓':''}</div>
+  document.getElementById('carryover-list').innerHTML = allItems.map(({ task: t, sourceKey }) => `
+    <div class="carryover-item ${t.done ? 'done-co' : ''}" id="co-item-${t.id}">
+      <div class="co-check" onclick="toggleCarryOver('${sourceKey}',${t.id})">${t.done ? '✓' : ''}</div>
       <div class="co-text">${escHtml(t.text)}</div>
       <button class="move-btn" onclick="moveCarryOverToFlex('${sourceKey}',${t.id})">→ Flex</button>
       <button class="move-btn" onclick="moveCarryOverToWind('${sourceKey}',${t.id})" style="margin-left:4px">→ Wind</button>
+      <button class="task-del" onclick="deleteCarryOverItem('${sourceKey}',${t.id})" style="margin-left:4px">✕</button>
     </div>`).join('');
 }
+
+window.deleteCarryOverItem = async function(sourceKey, id) {
+  const ds = await loadDay(sourceKey);
+  const task = (ds?.tasks?.wind || []).find(t => t.id === id);
+  if (task) await addToBin(task, 'wind', sourceKey);
+  if (ds?.tasks?.wind) ds.tasks.wind = ds.tasks.wind.filter(t => t.id !== id);
+  await saveDay(sourceKey, ds);
+  await loadCarryOver();
+};
 
 window.toggleCarryOver = async function(ydKey, id) {
   const ds = await loadDay(ydKey);
