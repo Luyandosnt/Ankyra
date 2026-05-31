@@ -490,6 +490,23 @@
   .cr-update-btn { background:var(--learning); border:none; border-radius:8px; padding:8px 14px; color:#000; font-size:0.78rem; font-weight:600; cursor:pointer; transition:opacity 0.2s; }
   .cr-change-btn { background:none; border:1px solid var(--border); border-radius:8px; padding:6px 10px; color:var(--muted); font-size:0.72rem; cursor:pointer; margin-top:2px; }
 
+  /* ── REVIEW WEEK NAV ── */
+  .review-week-nav {
+    display:flex; align-items:center; justify-content:space-between;
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:12px; padding:10px 14px; margin-bottom:16px;
+  }
+  .review-week-nav button {
+    background:none; border:1px solid var(--border); border-radius:8px;
+    padding:6px 12px; color:var(--muted); cursor:pointer; font-size:0.8rem;
+    transition:all 0.15s;
+  }
+  .review-week-nav button:hover:not(:disabled) { border-color:var(--accent); color:var(--accent); }
+  .review-week-nav button:disabled { opacity:0.3; cursor:default; }
+  .review-week-label { font-size:0.82rem; font-weight:600; color:var(--text); text-align:center; }
+  .review-week-sub { font-size:0.65rem; color:var(--muted); text-align:center; }
+  .stats-loading { font-size:0.75rem; color:var(--muted); text-align:center; padding:12px; }
+
   /* ── DAY DETAIL MODAL ── */
   .day-modal {
     position:fixed; inset:0; z-index:400;
@@ -1019,9 +1036,17 @@
       </div>
       <div class="section-title">Anchor Status · Last 14 Days</div>
       <div id="review-anchor-strip" style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:20px;"></div>
-      <div class="section-title">Domain Performance</div>
+      <div class="section-title">Domain Performance <span class="stats-loading" id="stats-loading-label" style="display:inline;font-size:0.65rem;color:var(--muted);margin-left:8px;"></span></div>
       <div class="domain-bars" id="domain-bars"></div>
-      <div class="section-title" style="margin-top:20px;">Sunday Review</div>
+      <div class="section-title" style="margin-top:20px;">Weekly Review</div>
+      <div class="review-week-nav">
+        <button id="review-prev-btn" onclick="navigateReviewWeek(-1)">← Prev</button>
+        <div>
+          <div class="review-week-label" id="review-week-label">—</div>
+          <div class="review-week-sub" id="review-week-sub"></div>
+        </div>
+        <button id="review-next-btn" onclick="navigateReviewWeek(1)" disabled>Next →</button>
+      </div>
       <div class="review-questions-grid">
         <div class="review-q"><div class="review-q-text">1. What moved forward this week?</div><textarea class="review-textarea" id="review-q1" placeholder="GECO: …  Construction: …  Health: …  Learning: …"></textarea></div>
         <div class="review-q"><div class="review-q-text">2. What kept stalling?</div><textarea class="review-textarea" id="review-q2" placeholder="Usually one thing…"></textarea></div>
@@ -1111,6 +1136,8 @@ const DOMAIN_COLORS = {
 let app, auth, db, currentUser, unsubscribe;
 let localCache = {};
 let syncTimeout = null;
+let reviewWeekOffset = 0;  // 0 = current week, -1 = last week, etc.
+let allDaysLoaded = false;
 
 function dateKey(offset=0) {
   const d = new Date(); d.setDate(d.getDate()+offset);
@@ -1560,7 +1587,7 @@ window.showView = async function(id, tabBtn, navId, sbId) {
   document.querySelectorAll('.sidebar-btn').forEach(b=>b.classList.remove('active'));
   const sbEl = document.getElementById(sbTarget); if(sbEl) sbEl.classList.add('active');
   if(id==='week') await renderWeek();
-  if(id==='review') await renderReview();
+  if(id==='review') { reviewWeekOffset = 0; await renderReview(); }
   if(id==='bin') await renderBin();
   if(id==='library') await renderLibrary();
 };
@@ -1613,50 +1640,79 @@ window.setWeekStatus = async function(key, status) {
 };
 
 // ── REVIEW ────────────────────────────────────────
+
+// Load every day doc from Firestore into localCache for accurate historical stats
+async function loadAllDays() {
+  if (allDaysLoaded) return;
+  const label = document.getElementById('stats-loading-label');
+  if (label) label.textContent = '(loading all history…)';
+  try {
+    const snap = await getDocs(collection(db, 'users', currentUser.uid, 'days'));
+    snap.forEach(d => {
+      if (!d.id.startsWith('review_')) localCache[d.id] = d.data();
+    });
+    allDaysLoaded = true;
+  } catch(e) {}
+  if (label) label.textContent = '';
+}
+
+function getReviewWeekMonday(offset) {
+  const today = new Date();
+  const dow = today.getDay();
+  const mondayOffset = dow === 0 ? -6 : 1 - dow;
+  const m = new Date(today);
+  m.setDate(today.getDate() + mondayOffset + offset * 7);
+  m.setHours(0,0,0,0);
+  return m;
+}
+
+function getReviewKey(offset) {
+  return 'review_' + getReviewWeekMonday(offset).toISOString().split('T')[0];
+}
+
 async function renderReview() {
-  // Streak
-  let streak=0, d=new Date();
-  for(let i=0;i<365;i++){
-    const k=new Date(d); k.setDate(d.getDate()-i);
-    const key=k.toISOString().split('T')[0];
-    const ds=await loadDay(key);
-    if(ds.anchorStatus==='done') streak++;
+  // Load full history for accurate stats (cached after first load)
+  await loadAllDays();
+
+  // Streak — walk back through localCache
+  let streak = 0;
+  for (let i = 0; i < 365; i++) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    const key = d.toISOString().split('T')[0];
+    const ds = localCache[key] || await loadDay(key);
+    if (ds?.anchorStatus === 'done') streak++;
     else break;
   }
   document.getElementById('streak-num').textContent = streak;
 
-  // Last 14 days
-  const last14 = await Promise.all(Array.from({length:14},(_,i)=>{
-    const dd=new Date(); dd.setDate(dd.getDate()-i);
-    return loadDay(dd.toISOString().split('T')[0]);
-  }));
-  const done14=last14.filter(s=>s?.anchorStatus==='done').length;
-  const tracked14=last14.filter(s=>s?.anchorStatus).length;
-  document.getElementById('completion-rate').textContent = tracked14?Math.round(done14/tracked14*100)+'%':'—';
+  // Completion rate — all tracked days
+  const allDayKeys = Object.keys(localCache).filter(k => !k.startsWith('review_'));
+  const tracked = allDayKeys.filter(k => localCache[k]?.anchorStatus).length;
+  const done = allDayKeys.filter(k => localCache[k]?.anchorStatus === 'done').length;
+  document.getElementById('completion-rate').textContent = tracked ? Math.round(done/tracked*100)+'%' : '—';
 
-  // Domain bars
-  const domains=['GECO — Production','GECO — Strategy','Construction / QS','Health & Fitness','Wildcard'];
+  // Domain bars — full history
+  const domains = ['GECO — Production','GECO — Strategy','Construction / QS','Health & Fitness','Wildcard'];
   const domainDone={}, domainTotal={};
-  const allKeys = Object.keys(localCache);
-  allKeys.forEach(k=>{
-    const ds=localCache[k];
-    if(!ds?.anchorStatus) return;
-    const dd=new Date(k); const dIdx=dd.getDay();
-    const domain=DAYS[dIdx].domain;
-    domainTotal[domain]=(domainTotal[domain]||0)+1;
-    if(ds.anchorStatus==='done') domainDone[domain]=(domainDone[domain]||0)+1;
+  allDayKeys.forEach(k => {
+    const ds = localCache[k];
+    if (!ds?.anchorStatus) return;
+    const dayIdx = new Date(k).getDay();
+    const domain = DAYS[dayIdx].domain;
+    domainTotal[domain] = (domainTotal[domain]||0) + 1;
+    if (ds.anchorStatus === 'done') domainDone[domain] = (domainDone[domain]||0) + 1;
   });
-  document.getElementById('domain-bars').innerHTML = domains.map(dom=>{
-    const total=domainTotal[dom]||0, done=domainDone[dom]||0;
-    const pct=total?Math.round(done/total*100):0;
-    const color=DOMAIN_COLORS[dom]||'var(--accent)';
+  document.getElementById('domain-bars').innerHTML = domains.map(dom => {
+    const total=domainTotal[dom]||0, doneN=domainDone[dom]||0;
+    const pct = total ? Math.round(doneN/total*100) : 0;
+    const color = DOMAIN_COLORS[dom]||'var(--accent)';
     return `<div class="domain-bar-row">
-      <div class="domain-bar-header"><span class="domain-bar-name">${dom}</span><span class="domain-bar-pct">${done}/${total} · ${pct}%</span></div>
+      <div class="domain-bar-header"><span class="domain-bar-name">${dom}</span><span class="domain-bar-pct">${doneN}/${total} · ${pct}%</span></div>
       <div class="domain-bar-track"><div class="domain-bar-fill" style="width:${pct}%;background:${color}"></div></div>
     </div>`;
   }).join('');
 
-  // Non-interactive anchor strip for Review
+  // Non-interactive anchor strip
   document.getElementById('review-anchor-strip').innerHTML = Array.from({length:14},(_,i)=>{
     const dd=new Date(); dd.setDate(dd.getDate()-(13-i));
     const k=dd.toISOString().split('T')[0];
@@ -1666,21 +1722,39 @@ async function renderReview() {
     return `<div class="hist-dot ${cls}" style="cursor:default">${icon}</div>`;
   }).join('');
 
-  // Load review answers
-  const reviewKey = 'review_'+getWeekKeys()[0].key;
-  const rv = await loadDay(reviewKey);
-  ['q1','q2','q3','q4'].forEach(q=>{ const el=document.getElementById('review-'+q); if(el&&rv[q]) el.value=rv[q]; });
+  // Load review for current offset week
+  await loadReviewWeek();
 }
 
-window.saveReview = async function() {
-  const reviewKey = 'review_'+getWeekKeys()[0].key;
-  await saveDay(reviewKey, {
-    q1:document.getElementById('review-q1').value,
-    q2:document.getElementById('review-q2').value,
-    q3:document.getElementById('review-q3').value,
-    q4:document.getElementById('review-q4').value,
+async function loadReviewWeek() {
+  const monday = getReviewWeekMonday(reviewWeekOffset);
+  const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6);
+  const fmt = d => d.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+  document.getElementById('review-week-label').textContent =
+    reviewWeekOffset === 0 ? 'This week' : reviewWeekOffset === -1 ? 'Last week' : `Week of ${fmt(monday)}`;
+  document.getElementById('review-week-sub').textContent = `${fmt(monday)} – ${fmt(sunday)}`;
+  document.getElementById('review-next-btn').disabled = reviewWeekOffset >= 0;
+
+  const rv = await loadDay(getReviewKey(reviewWeekOffset));
+  ['q1','q2','q3','q4'].forEach(q => {
+    const el = document.getElementById('review-'+q);
+    if (el) el.value = rv?.[q] || '';
   });
-  showToast('✓ Review saved & synced');
+}
+
+window.navigateReviewWeek = async function(dir) {
+  reviewWeekOffset = Math.min(0, reviewWeekOffset + dir);
+  await loadReviewWeek();
+};
+
+window.saveReview = async function() {
+  await saveDay(getReviewKey(reviewWeekOffset), {
+    q1: document.getElementById('review-q1').value,
+    q2: document.getElementById('review-q2').value,
+    q3: document.getElementById('review-q3').value,
+    q4: document.getElementById('review-q4').value,
+  });
+  showToast(reviewWeekOffset === 0 ? '✓ Review saved & synced' : '✓ Past review updated');
 };
 
 // ── CURRENT READ ──────────────────────────────────
