@@ -858,6 +858,21 @@
         <div id="carryover-list"></div>
       </div>
 
+      <!-- Schedule Block -->
+      <div class="zone-block" id="schedule-block">
+        <div class="zone-header">
+          <span class="zone-icon">📋</span>
+          <span class="zone-name">Schedule</span>
+          <span class="zone-time">Identified Tasks</span>
+        </div>
+        <p style="font-size:0.72rem;color:var(--muted);margin-bottom:10px;">Tasks you've identified. Move them into a work block when ready.</p>
+        <div class="task-input-row">
+          <input class="task-input" id="schedule-input" placeholder="Add a scheduled task…" onkeydown="handleEnter(event,'schedule')">
+          <button class="add-btn" onclick="addTask('schedule')" style="background:var(--partial)">+</button>
+        </div>
+        <div class="task-list" id="schedule-tasks"></div>
+      </div>
+
       <div class="zones-grid">
         <div class="zone-block">
           <div class="zone-header">
@@ -1229,7 +1244,7 @@ async function saveDay(dateK, data) {
 }
 
 function defaultDay() {
-  return { anchorStatus: null, tasks: { flex:[], wind:[], night:[], learn:[] }, captures: [], deletedIds: [] };
+  return { anchorStatus: null, tasks: { schedule:[], flex:[], wind:[], night:[], learn:[] }, captures: [], deletedIds: [] };
 }
 
 // ── BIN ───────────────────────────────────────────
@@ -1362,7 +1377,7 @@ async function initApp() {
   setSyncState('synced');
 
   if (ds.anchorStatus) applyAnchorStatus(ds.anchorStatus);
-  ['flex','wind','night','learn'].forEach(z => renderTasks(z, ds));
+  ['schedule','flex','wind','night','learn'].forEach(z => renderTasks(z, ds));
   renderCaptures(ds);
   await loadCarryOver();
   await renderCurrentRead();
@@ -1428,6 +1443,7 @@ function renderTasks(zone, ds) {
     <div class="task-item ${t.done?'done':''}" onclick="toggleTask('${zone}',${t.id})">
       <div class="task-check">${t.done?'✓':''}</div>
       <div class="task-text">${escHtml(t.text)}</div>
+      ${zone==='schedule' ? `<button class="move-btn" onclick="event.stopPropagation();moveFromSchedule(${t.id},'flex')"  style="margin-right:4px">→ Flex</button><button class="move-btn" onclick="event.stopPropagation();moveFromSchedule(${t.id},'wind')" style="margin-right:4px">→ Wind</button><button class="move-btn" onclick="event.stopPropagation();moveFromSchedule(${t.id},'night')" style="margin-right:4px">→ Night</button>` : ''}
       ${zone==='flex'  ? `<button class="move-btn" onclick="event.stopPropagation();moveToWind(${t.id})" style="margin-right:4px">→ Wind</button>` : ''}
       ${zone==='wind'  ? `<button class="move-btn" onclick="event.stopPropagation();moveToNight(${t.id})" style="margin-right:4px">→ Night</button>` : ''}
       ${zone==='night' ? `<button class="move-btn" onclick="event.stopPropagation();moveToWind(${t.id})" style="margin-right:4px">→ Wind</button>` : ''}
@@ -1464,6 +1480,22 @@ window.moveToNight = async function(id) {
     renderTasks('wind', ds);
     renderTasks('night', ds);
     showToast('Moved to Night Shift ✓');
+  }
+};
+
+window.moveFromSchedule = async function(id, toZone) {
+  const dk = dateKey();
+  const ds = await loadDay(dk);
+  const task = (ds.tasks.schedule||[]).find(t=>t.id===id);
+  if(task) {
+    if(!ds.tasks[toZone]) ds.tasks[toZone]=[];
+    ds.tasks[toZone].push({...task, done:false});
+    ds.tasks.schedule = ds.tasks.schedule.filter(t=>t.id!==id);
+    await saveDay(dk, ds);
+    renderTasks('schedule', ds);
+    renderTasks(toZone, ds);
+    const labels={flex:'Flex Zone',wind:'Wind-Down',night:'Night Shift'};
+    showToast(`Moved to ${labels[toZone]} ✓`);
   }
 };
 
@@ -1873,6 +1905,10 @@ window.openDayDetail = async function(dateK, label) {
     <div class="day-modal-section">
       <div class="day-modal-section-title">⚓ Anchor Block</div>
       <div class="day-modal-task"><span>${statusLabel}</span></div>
+    </div>
+    <div class="day-modal-section">
+      <div class="day-modal-section-title">📋 Schedule</div>
+      ${taskList(ds?.tasks?.schedule)}
     </div>
     <div class="day-modal-section">
       <div class="day-modal-section-title">☀️ Flex Zone</div>
