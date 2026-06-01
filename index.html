@@ -1384,6 +1384,30 @@ window.moveCarryOverToNight = async function(sourceKey, sourceZone, id) {
   }
 };
 
+// ── SCHEDULE MIGRATION ────────────────────────────
+// Pulls tasks.schedule from any daily docs into the persistent schedule doc (runs once)
+async function migrateScheduleFromDays() {
+  let migrated = false;
+  for (let i = 0; i <= 60; i++) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    const key = d.toISOString().split('T')[0];
+    const dayData = await loadDay(key);
+    const legacyTasks = dayData?.tasks?.schedule;
+    if (legacyTasks?.length) {
+      await loadSchedule();
+      const existingIds = new Set(scheduleCache.map(t => t.id));
+      legacyTasks.forEach(t => {
+        if (!existingIds.has(t.id)) { scheduleCache.push(t); existingIds.add(t.id); }
+      });
+      // Clear from day doc so migration doesn't repeat
+      dayData.tasks.schedule = [];
+      await saveDay(key, dayData);
+      migrated = true;
+    }
+  }
+  if (migrated) await saveScheduleDoc();
+}
+
 // ── SCHEDULE (persistent backlog) ─────────────────
 let scheduleCache = null;
 
@@ -1651,7 +1675,7 @@ window.showView = async function(id, tabBtn, navId, sbId) {
   if(id==='review') { reviewWeekOffset = 0; await renderReview(); }
   if(id==='bin') await renderBin();
   if(id==='library') await renderLibrary();
-  if(id==='schedule') { await loadSchedule(); renderSchedule(); }
+  if(id==='schedule') { await migrateScheduleFromDays(); await loadSchedule(); renderSchedule(); }
 };
 
 async function renderWeek() {
