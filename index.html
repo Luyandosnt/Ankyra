@@ -884,8 +884,8 @@
         </div>
         <p style="font-size:0.72rem;color:var(--muted);margin-bottom:10px;">Tasks you've identified. Move them into a work block when ready.</p>
         <div class="task-input-row">
-          <input class="task-input" id="schedule-input" placeholder="Add a scheduled task…" onkeydown="handleEnter(event,'schedule')">
-          <button class="add-btn" onclick="addTask('schedule')" style="background:var(--partial)">+</button>
+          <input class="task-input" id="schedule-input" placeholder="Add a scheduled task…" onkeydown="if(event.key==='Enter')addScheduleTask()">
+          <button class="add-btn" onclick="addScheduleTask()" style="background:var(--partial)">+</button>
         </div>
         <div class="task-list" id="schedule-tasks"></div>
       </div>
@@ -1271,7 +1271,7 @@ async function saveDay(dateK, data) {
 }
 
 function defaultDay() {
-  return { anchorStatus: null, tasks: { schedule:[], flex:[], wind:[], night:[], learn:[] }, captures: [], deletedIds: [] };
+  return { anchorStatus: null, tasks: { flex:[], wind:[], night:[], learn:[] }, captures: [], deletedIds: [] };
 }
 
 // ── BIN ───────────────────────────────────────────
@@ -1382,6 +1382,65 @@ window.moveCarryOverToNight = async function(sourceKey, sourceZone, id) {
   }
 };
 
+// ── SCHEDULE (persistent backlog) ─────────────────
+let scheduleCache = null;
+
+function scheduleDocRef() { return doc(db, 'users', currentUser.uid, 'meta', 'schedule'); }
+
+async function loadSchedule() {
+  try {
+    const snap = await getDoc(scheduleDocRef());
+    scheduleCache = snap.exists() ? (snap.data().tasks || []) : [];
+  } catch(e) { scheduleCache = scheduleCache || []; }
+  return scheduleCache;
+}
+
+async function saveScheduleDoc() {
+  try { await setDoc(scheduleDocRef(), { tasks: scheduleCache }); setSyncState('synced'); } catch(e) { setSyncState('error'); }
+}
+
+function renderSchedule() {
+  const tasks = scheduleCache || [];
+  document.getElementById('schedule-tasks').innerHTML = tasks.map(t => `
+    <div class="task-item ${t.done?'done':''}" onclick="toggleScheduleTask(${t.id})">
+      <div class="task-check">${t.done?'✓':''}</div>
+      <div class="task-text">${escHtml(t.text)}</div>
+      <button class="move-btn" onclick="event.stopPropagation();moveFromSchedule(${t.id},'flex')"  style="margin-right:4px">→ Flex</button>
+      <button class="move-btn" onclick="event.stopPropagation();moveFromSchedule(${t.id},'wind')" style="margin-right:4px">→ Wind</button>
+      <button class="move-btn" onclick="event.stopPropagation();moveFromSchedule(${t.id},'night')" style="margin-right:4px">→ Night</button>
+      <button class="task-del" onclick="event.stopPropagation();deleteScheduleTask(${t.id})">✕</button>
+    </div>`).join('');
+}
+
+window.addScheduleTask = async function() {
+  const input = document.getElementById('schedule-input');
+  const val = input.value.trim();
+  if (!val) return;
+  await loadSchedule();
+  scheduleCache.push({ text: val, done: false, id: Date.now() });
+  input.value = '';
+  setSyncState('syncing');
+  renderSchedule();
+  await saveScheduleDoc();
+};
+
+window.toggleScheduleTask = async function(id) {
+  await loadSchedule();
+  const t = scheduleCache.find(t => t.id === id);
+  if (t) { t.done = !t.done; setSyncState('syncing'); renderSchedule(); await saveScheduleDoc(); }
+};
+
+window.deleteScheduleTask = async function(id) {
+  await loadSchedule();
+  const task = scheduleCache.find(t => t.id === id);
+  if (task) await addToBin(task, 'schedule', 'persistent');
+  scheduleCache = scheduleCache.filter(t => t.id !== id);
+  setSyncState('syncing');
+  renderSchedule();
+  await saveScheduleDoc();
+  showToast('Moved to bin 🗑️');
+};
+
 // ── APP INIT ──────────────────────────────────────
 async function initApp() {
   const today = new Date();
@@ -1404,10 +1463,12 @@ async function initApp() {
   setSyncState('synced');
 
   if (ds.anchorStatus) applyAnchorStatus(ds.anchorStatus);
-  ['schedule','flex','wind','night','learn'].forEach(z => renderTasks(z, ds));
+  ['flex','wind','night','learn'].forEach(z => renderTasks(z, ds));
   renderCaptures(ds);
   await loadCarryOver();
   await renderCurrentRead();
+  await loadSchedule();
+  renderSchedule();
 }
 
 // ── ANCHOR STATUS ─────────────────────────────────
@@ -1470,8 +1531,7 @@ function renderTasks(zone, ds) {
     <div class="task-item ${t.done?'done':''}" onclick="toggleTask('${zone}',${t.id})">
       <div class="task-check">${t.done?'✓':''}</div>
       <div class="task-text">${escHtml(t.text)}</div>
-      ${zone==='schedule' ? `<button class="move-btn" onclick="event.stopPropagation();moveFromSchedule(${t.id},'flex')"  style="margin-right:4px">→ Flex</button><button class="move-btn" onclick="event.stopPropagation();moveFromSchedule(${t.id},'wind')" style="margin-right:4px">→ Wind</button><button class="move-btn" onclick="event.stopPropagation();moveFromSchedule(${t.id},'night')" style="margin-right:4px">→ Night</button>` : ''}
-      ${zone==='flex'  ? `<button class="move-btn" onclick="event.stopPropagation();moveToWind(${t.id})" style="margin-right:4px">→ Wind</button>` : ''}
+${zone==='flex'  ? `<button class="move-btn" onclick="event.stopPropagation();moveToWind(${t.id})" style="margin-right:4px">→ Wind</button>` : ''}
       ${zone==='wind'  ? `<button class="move-btn" onclick="event.stopPropagation();moveToNight(${t.id})" style="margin-right:4px">→ Night</button>` : ''}
       ${zone==='night' ? `<button class="move-btn" onclick="event.stopPropagation();moveToWind(${t.id})" style="margin-right:4px">→ Wind</button>` : ''}
       <button class="task-del" onclick="event.stopPropagation();deleteTask('${zone}',${t.id})">✕</button>
@@ -1511,17 +1571,18 @@ window.moveToNight = async function(id) {
 };
 
 window.moveFromSchedule = async function(id, toZone) {
-  const dk = dateKey();
-  const ds = await loadDay(dk);
-  const task = (ds.tasks.schedule||[]).find(t=>t.id===id);
-  if(task) {
-    if(!ds.tasks[toZone]) ds.tasks[toZone]=[];
-    ds.tasks[toZone].push({...task, done:false});
-    ds.tasks.schedule = ds.tasks.schedule.filter(t=>t.id!==id);
-    await saveDay(dk, ds);
-    renderTasks('schedule', ds);
+  await loadSchedule();
+  const task = scheduleCache.find(t => t.id === id);
+  if (task) {
+    const dk = dateKey();
+    const ds = await loadDay(dk);
+    if (!ds.tasks[toZone]) ds.tasks[toZone] = [];
+    ds.tasks[toZone].push({...task, done: false});
+    scheduleCache = scheduleCache.filter(t => t.id !== id);
+    await Promise.all([saveDay(dk, ds), saveScheduleDoc()]);
+    renderSchedule();
     renderTasks(toZone, ds);
-    const labels={flex:'Flex Zone',wind:'Wind-Down',night:'Night Shift'};
+    const labels = {flex:'Flex Zone', wind:'Wind-Down', night:'Night Shift'};
     showToast(`Moved to ${labels[toZone]} ✓`);
   }
 };
