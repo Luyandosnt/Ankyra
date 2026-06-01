@@ -804,6 +804,9 @@
       <button class="sidebar-btn" id="sb-review" onclick="showView('review',null,null,'sb-review')">
         <span class="sb-icon">📊</span> Review
       </button>
+      <button class="sidebar-btn" id="sb-schedule" onclick="showView('schedule',null,null,'sb-schedule')">
+        <span class="sb-icon">📋</span> Schedule
+      </button>
       <button class="sidebar-btn" id="sb-library" onclick="showView('library',null,null,'sb-library')">
         <span class="sb-icon">📚</span> Library
       </button>
@@ -873,21 +876,6 @@
         </div>
         <p style="font-size:0.72rem;color:var(--muted);margin-bottom:10px;">Undone tasks from Wind-Down &amp; Night Shift. Deal with them first.</p>
         <div id="carryover-list"></div>
-      </div>
-
-      <!-- Schedule Block -->
-      <div class="zone-block" id="schedule-block">
-        <div class="zone-header">
-          <span class="zone-icon">📋</span>
-          <span class="zone-name">Schedule</span>
-          <span class="zone-time">Identified Tasks</span>
-        </div>
-        <p style="font-size:0.72rem;color:var(--muted);margin-bottom:10px;">Tasks you've identified. Move them into a work block when ready.</p>
-        <div class="task-input-row">
-          <input class="task-input" id="schedule-input" placeholder="Add a scheduled task…" onkeydown="if(event.key==='Enter')addScheduleTask()">
-          <button class="add-btn" onclick="addScheduleTask()" style="background:var(--partial)">+</button>
-        </div>
-        <div class="task-list" id="schedule-tasks"></div>
       </div>
 
       <div class="zones-grid">
@@ -990,6 +978,19 @@
       </div>
     </div>
 
+    <!-- SCHEDULE -->
+    <div id="view-schedule" class="view">
+      <div class="section-title">Schedule</div>
+      <p style="font-size:0.78rem;color:var(--muted);margin-bottom:16px;">Your identified backlog. Tasks persist here until you move or remove them.</p>
+      <div class="zone-block">
+        <div class="task-input-row">
+          <input class="task-input" id="schedule-input" placeholder="Add a scheduled task…" onkeydown="if(event.key==='Enter')addScheduleTask()">
+          <button class="add-btn" onclick="addScheduleTask()" style="background:var(--partial)">+</button>
+        </div>
+        <div class="task-list" id="schedule-tasks" style="margin-top:10px;"></div>
+      </div>
+    </div>
+
     <!-- LIBRARY -->
     <div id="view-library" class="view">
       <div class="add-book-form">
@@ -1084,6 +1085,7 @@
   <button class="nav-btn active" id="nav-today" onclick="showView('today',null,'nav-today')"><span class="nav-icon">⚓</span>Today</button>
   <button class="nav-btn" id="nav-week" onclick="showView('week',null,'nav-week')"><span class="nav-icon">📅</span>Week</button>
   <button class="nav-btn" id="nav-review" onclick="showView('review',null,'nav-review')"><span class="nav-icon">📊</span>Review</button>
+  <button class="nav-btn" id="nav-schedule" onclick="showView('schedule',null,'nav-schedule')"><span class="nav-icon">📋</span>Schedule</button>
   <button class="nav-btn" id="nav-library" onclick="showView('library',null,'nav-library')"><span class="nav-icon">📚</span>Library</button>
   <button class="nav-btn" id="nav-bin" onclick="showView('bin',null,'nav-bin')"><span class="nav-icon">🗑️</span>Bin</button>
 </div>
@@ -1467,8 +1469,6 @@ async function initApp() {
   renderCaptures(ds);
   await loadCarryOver();
   await renderCurrentRead();
-  await loadSchedule();
-  renderSchedule();
 }
 
 // ── ANCHOR STATUS ─────────────────────────────────
@@ -1651,6 +1651,7 @@ window.showView = async function(id, tabBtn, navId, sbId) {
   if(id==='review') { reviewWeekOffset = 0; await renderReview(); }
   if(id==='bin') await renderBin();
   if(id==='library') await renderLibrary();
+  if(id==='schedule') { await loadSchedule(); renderSchedule(); }
 };
 
 async function renderWeek() {
