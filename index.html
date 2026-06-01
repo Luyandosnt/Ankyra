@@ -444,6 +444,19 @@
   }
   .signin-btn:active { transform: scale(0.97); opacity: 0.85; }
 
+  /* ── INLINE EDIT ── */
+  .edit-btn { background:none; border:none; color:var(--muted); cursor:pointer; font-size:0.72rem; padding:2px 5px; transition:color 0.15s; flex-shrink:0; }
+  .edit-btn:hover { color:var(--accent); }
+  .task-edit-input {
+    flex:1; background:var(--surface); border:1px solid var(--accent);
+    border-radius:6px; padding:4px 8px;
+    font-family:'DM Sans',sans-serif; font-size:0.82rem; color:var(--text);
+    outline:none; min-width:0;
+  }
+  .book-edit-row { display:flex; gap:8px; align-items:center; margin-top:8px; flex-wrap:wrap; }
+  .book-edit-row input { flex:1; min-width:80px; background:var(--surface2); border:1px solid var(--accent); border-radius:6px; padding:6px 10px; font-family:'DM Sans',sans-serif; font-size:0.82rem; color:var(--text); outline:none; }
+  .book-save-btn { background:var(--accent); border:none; border-radius:6px; padding:6px 12px; font-size:0.78rem; font-weight:600; color:#000; cursor:pointer; }
+
   /* ── CARRY OVER BLOCK ── */
   .carryover-block { border-color: rgba(255,107,53,0.35); }
   .carryover-block::before { background: var(--accent2) !important; }
@@ -1436,12 +1449,13 @@ async function saveScheduleDoc() {
 function renderSchedule() {
   const tasks = scheduleCache || [];
   document.getElementById('schedule-tasks').innerHTML = tasks.map(t => `
-    <div class="task-item ${t.done?'done':''}" onclick="toggleScheduleTask(${t.id})">
+    <div class="task-item ${t.done?'done':''}" id="sched-item-${t.id}" onclick="toggleScheduleTask(${t.id})">
       <div class="task-check">${t.done?'✓':''}</div>
-      <div class="task-text">${escHtml(t.text)}</div>
+      <div class="task-text" id="sched-text-${t.id}">${escHtml(t.text)}</div>
       <button class="move-btn" onclick="event.stopPropagation();moveFromSchedule(${t.id},'flex')"  style="margin-right:4px">→ Flex</button>
       <button class="move-btn" onclick="event.stopPropagation();moveFromSchedule(${t.id},'wind')" style="margin-right:4px">→ Wind</button>
       <button class="move-btn" onclick="event.stopPropagation();moveFromSchedule(${t.id},'night')" style="margin-right:4px">→ Night</button>
+      <button class="edit-btn" onclick="event.stopPropagation();editScheduleTask(${t.id})">✏️</button>
       <button class="task-del" onclick="event.stopPropagation();deleteScheduleTask(${t.id})">✕</button>
     </div>`).join('');
 }
@@ -1560,12 +1574,13 @@ window.deleteTask = async function(zone, id) {
 function renderTasks(zone, ds) {
   const tasks = ds?.tasks?.[zone] || [];
   document.getElementById(zone+'-tasks').innerHTML = tasks.map(t=>`
-    <div class="task-item ${t.done?'done':''}" onclick="toggleTask('${zone}',${t.id})">
+    <div class="task-item ${t.done?'done':''}" id="task-${zone}-${t.id}" onclick="toggleTask('${zone}',${t.id})">
       <div class="task-check">${t.done?'✓':''}</div>
-      <div class="task-text">${escHtml(t.text)}</div>
-${zone==='flex'  ? `<button class="move-btn" onclick="event.stopPropagation();moveToWind(${t.id})" style="margin-right:4px">→ Wind</button>` : ''}
+      <div class="task-text" id="task-text-${zone}-${t.id}">${escHtml(t.text)}</div>
+      ${zone==='flex'  ? `<button class="move-btn" onclick="event.stopPropagation();moveToWind(${t.id})" style="margin-right:4px">→ Wind</button>` : ''}
       ${zone==='wind'  ? `<button class="move-btn" onclick="event.stopPropagation();moveToNight(${t.id})" style="margin-right:4px">→ Night</button>` : ''}
       ${zone==='night' ? `<button class="move-btn" onclick="event.stopPropagation();moveToWind(${t.id})" style="margin-right:4px">→ Wind</button>` : ''}
+      <button class="edit-btn" onclick="event.stopPropagation();editTask('${zone}',${t.id})">✏️</button>
       <button class="task-del" onclick="event.stopPropagation();deleteTask('${zone}',${t.id})">✕</button>
     </div>`).join('');
 }
@@ -1663,9 +1678,10 @@ function renderCaptures(ds) {
   const items = ds?.captures || [];
   document.getElementById('capture-count').textContent = items.length+' item'+(items.length!==1?'s':'');
   document.getElementById('capture-list').innerHTML = items.map(c=>`
-    <div class="captured-item">
-      <div style="flex:1;font-size:0.82rem">${escHtml(c.text)}</div>
+    <div class="captured-item" id="cap-item-${c.id}">
+      <div style="flex:1;font-size:0.82rem" id="cap-text-${c.id}">${escHtml(c.text)}</div>
       <button class="move-btn" onclick="moveToFlex(${c.id})">→ Flex</button>
+      <button class="edit-btn" onclick="editCapture(${c.id})">✏️</button>
       <button class="task-del" onclick="deleteCapture(${c.id})" style="margin-left:4px">✕</button>
     </div>`).join('');
 }
@@ -1996,7 +2012,7 @@ function renderLibraryBooks() {
     if(b.status === 'completed' && b.completedAt) {
       extra = `<div class="book-date">Finished ${new Date(b.completedAt).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}</div>`;
     }
-    return `<div class="book-card">
+    return `<div class="book-card" id="book-card-${b.id}">
       <div class="book-card-header">
         <div class="book-title-text">${escHtml(b.title)}</div>
         <span class="book-status-badge ${badgeClass}">${badgeText}</span>
@@ -2007,6 +2023,7 @@ function renderLibraryBooks() {
         ${b.status!=='reading'  ? `<button class="cr-change-btn" onclick="moveBookStatus(${b.id},'reading')">→ Reading</button>` : ''}
         ${b.status!=='want'     ? `<button class="cr-change-btn" onclick="moveBookStatus(${b.id},'want')">→ Want</button>` : ''}
         ${b.status!=='completed'? `<button class="cr-change-btn" onclick="moveBookStatus(${b.id},'completed')">→ Done</button>` : ''}
+        <button class="edit-btn" onclick="editBook(${b.id})">✏️</button>
         <button class="book-del-btn" onclick="deleteBook(${b.id})" style="margin-left:auto">✕</button>
       </div>
     </div>`;
@@ -2166,6 +2183,74 @@ window.clearBin = async function() {
   await saveBin([]);
   await renderBin();
   showToast('Bin emptied');
+};
+
+// ── INLINE EDITING ────────────────────────────────
+function inlineEditEl(el, onSave) {
+  const current = el.textContent;
+  el.innerHTML = `<input class="task-edit-input" value="${escHtml(current)}">`;
+  const input = el.querySelector('input');
+  input.focus(); input.select();
+  const save = () => { const v = input.value.trim(); if (v && v !== current) onSave(v); else el.textContent = current; };
+  input.addEventListener('blur', save);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); input.blur(); } if (e.key === 'Escape') { el.textContent = current; input.removeEventListener('blur', save); } });
+}
+
+window.editTask = async function(zone, id) {
+  const el = document.getElementById(`task-text-${zone}-${id}`);
+  if (!el) return;
+  inlineEditEl(el, async newText => {
+    const dk = dateKey();
+    const ds = await loadDay(dk);
+    const t = (ds.tasks[zone]||[]).find(t => t.id === id);
+    if (t) { t.text = newText; await saveDay(dk, ds); renderTasks(zone, ds); }
+  });
+};
+
+window.editScheduleTask = function(id) {
+  const el = document.getElementById(`sched-text-${id}`);
+  if (!el) return;
+  inlineEditEl(el, async newText => {
+    const t = scheduleCache.find(t => t.id === id);
+    if (t) { t.text = newText; await saveScheduleDoc(); renderSchedule(); }
+  });
+};
+
+window.editCapture = function(id) {
+  const el = document.getElementById(`cap-text-${id}`);
+  if (!el) return;
+  inlineEditEl(el, async newText => {
+    const dk = dateKey();
+    const ds = await loadDay(dk);
+    const c = (ds.captures||[]).find(c => c.id === id);
+    if (c) { c.text = newText; await saveDay(dk, ds); renderCaptures(ds); }
+  });
+};
+
+window.editBook = function(id) {
+  const card = document.getElementById(`book-card-${id}`);
+  if (!card) return;
+  const b = (libraryCache||[]).find(b => b.id === id);
+  if (!b) return;
+  // Check if edit row already open
+  if (card.querySelector('.book-edit-row')) { card.querySelector('.book-edit-row').remove(); return; }
+  const row = document.createElement('div');
+  row.className = 'book-edit-row';
+  row.innerHTML = `<input id="bedit-title-${id}" value="${escHtml(b.title)}" placeholder="Title"><input id="bedit-pages-${id}" type="number" value="${b.totalPages||''}" placeholder="Pages" style="max-width:90px"><button class="book-save-btn" onclick="saveBookEdit(${id})">Save</button>`;
+  card.appendChild(row);
+  card.querySelector(`#bedit-title-${id}`).focus();
+};
+
+window.saveBookEdit = async function(id) {
+  const titleEl = document.getElementById(`bedit-title-${id}`);
+  const pagesEl = document.getElementById(`bedit-pages-${id}`);
+  if (!titleEl) return;
+  const newTitle = titleEl.value.trim();
+  const newPages = parseInt(pagesEl.value) || null;
+  if (!newTitle) return;
+  const books = await loadLibrary();
+  const b = books.find(b => b.id === id);
+  if (b) { b.title = newTitle; if (newPages) b.totalPages = newPages; await saveLibrary(books); renderLibraryBooks(); showToast('Book updated ✓'); }
 };
 
 // ── UTILS ─────────────────────────────────────────
