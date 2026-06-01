@@ -1387,23 +1387,31 @@ window.moveCarryOverToNight = async function(sourceKey, sourceZone, id) {
 // ── SCHEDULE MIGRATION ────────────────────────────
 // Pulls tasks.schedule from any daily docs into the persistent schedule doc (runs once)
 async function migrateScheduleFromDays() {
+  // Load persistent schedule ONCE before scanning days
+  const snap = await getDoc(scheduleDocRef()).catch(() => null);
+  scheduleCache = (snap && snap.exists()) ? (snap.data().tasks || []) : [];
+  const existingIds = new Set(scheduleCache.map(t => t.id));
+
   let migrated = false;
   for (let i = 0; i <= 60; i++) {
     const d = new Date(); d.setDate(d.getDate() - i);
     const key = d.toISOString().split('T')[0];
-    const dayData = await loadDay(key);
-    const legacyTasks = dayData?.tasks?.schedule;
-    if (legacyTasks?.length) {
-      await loadSchedule();
-      const existingIds = new Set(scheduleCache.map(t => t.id));
-      legacyTasks.forEach(t => {
-        if (!existingIds.has(t.id)) { scheduleCache.push(t); existingIds.add(t.id); }
-      });
-      // Clear from day doc so migration doesn't repeat
-      dayData.tasks.schedule = [];
-      await saveDay(key, dayData);
-      migrated = true;
-    }
+    // Fetch directly from Firestore so we don't hit a stale cache
+    try {
+      const daySnap = await getDoc(doc(db, 'users', currentUser.uid, 'days', key));
+      if (!daySnap.exists()) continue;
+      const dayData = daySnap.data();
+      const legacyTasks = dayData?.tasks?.schedule;
+      if (legacyTasks?.length) {
+        legacyTasks.forEach(t => {
+          if (!existingIds.has(t.id)) { scheduleCache.push(t); existingIds.add(t.id); migrated = true; }
+        });
+        // Clear from day doc
+        dayData.tasks.schedule = [];
+        await setDoc(doc(db, 'users', currentUser.uid, 'days', key), dayData);
+        localCache[key] = dayData;
+      }
+    } catch(e) {}
   }
   if (migrated) await saveScheduleDoc();
 }
