@@ -446,13 +446,20 @@
 
 /* ── ACTIVE ZONE ── */
   .zone-now-badge {
-    font-size:0.6rem; font-weight:700; letter-spacing:0.1em;
+    font-size:0.58rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase;
     background:var(--accent); color:#000; border-radius:4px;
-    padding:2px 7px; margin-left:6px;
-    animation: pulse 2s infinite;
+    padding:2px 8px; margin-left:6px; flex-shrink:0;
   }
-  .zone-block.zone-active { border-color: var(--accent); }
-  .zone-block.zone-active::before { background: var(--accent) !important; }
+  .zone-block.zone-active {
+    border-color: rgba(245,200,66,0.6);
+    background: linear-gradient(160deg, rgba(245,200,66,0.05) 0%, var(--surface) 60%);
+    animation: zoneGlow 3s ease-in-out infinite;
+    position: relative;
+  }
+  @keyframes zoneGlow {
+    0%,100% { box-shadow: 0 0 0 1px rgba(245,200,66,0.15), 0 0 20px rgba(245,200,66,0.10), 0 4px 32px rgba(245,200,66,0.06); }
+    50%      { box-shadow: 0 0 0 1px rgba(245,200,66,0.40), 0 0 36px rgba(245,200,66,0.18), 0 6px 56px rgba(245,200,66,0.10); }
+  }
 
   /* ── TOGGLE SWITCH ── */
   .toggle-switch { position:relative; display:inline-block; width:44px; height:24px; flex-shrink:0; }
@@ -1766,6 +1773,7 @@ window.showView = async function(id, tabBtn, navId, sbId) {
   const sbTarget = sbId || 'sb-'+id;
   document.querySelectorAll('.sidebar-btn').forEach(b=>b.classList.remove('active'));
   const sbEl = document.getElementById(sbTarget); if(sbEl) sbEl.classList.add('active');
+  if(id==='today') { updateActiveZone(); }
   if(id==='week') await renderWeek();
   if(id==='review') { reviewWeekOffset = 0; await renderReview(); }
   if(id==='bin') await renderBin();
@@ -2414,10 +2422,9 @@ window.saveGeneralSettings = async function() {
 let lastActiveZone = null;
 
 function getActiveZone() {
-  if (!settingsCache) return null;
   const now = new Date();
   const cur = now.getHours()*60 + now.getMinutes();
-  const zt = settingsCache.zoneTimes || DEFAULT_ZONE_TIMES;
+  const zt = settingsCache?.zoneTimes || DEFAULT_ZONE_TIMES;
   const keys = ZONE_DEFS.map(z => z.key);
   let active = null;
   keys.forEach((key, i) => {
@@ -2443,8 +2450,7 @@ function updateZoneTimeLabels() {
 }
 
 function updateActiveZone() {
-  if (!settingsCache) return;
-  const highlight = settingsCache.highlight !== false;
+  const highlight = settingsCache ? settingsCache.highlight !== false : true;
   const active = getActiveZone();
 
   ZONE_DEFS.forEach(z => {
