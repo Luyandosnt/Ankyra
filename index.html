@@ -444,7 +444,34 @@
   }
   .signin-btn:active { transform: scale(0.97); opacity: 0.85; }
 
-/* ── INLINE EDIT ── */
+/* ── ACTIVE ZONE ── */
+  .zone-now-badge {
+    font-size:0.6rem; font-weight:700; letter-spacing:0.1em;
+    background:var(--accent); color:#000; border-radius:4px;
+    padding:2px 7px; margin-left:6px;
+    animation: pulse 2s infinite;
+  }
+  .zone-block.zone-active { border-color: var(--accent); }
+  .zone-block.zone-active::before { background: var(--accent) !important; }
+
+  /* ── TOGGLE SWITCH ── */
+  .toggle-switch { position:relative; display:inline-block; width:44px; height:24px; flex-shrink:0; }
+  .toggle-switch input { opacity:0; width:0; height:0; }
+  .toggle-slider { position:absolute; cursor:pointer; inset:0; background:var(--surface2); border:1px solid var(--border); border-radius:24px; transition:background 0.2s; }
+  .toggle-slider::before { content:''; position:absolute; height:18px; width:18px; left:2px; bottom:2px; background:var(--muted); border-radius:50%; transition:transform 0.2s, background 0.2s; }
+  .toggle-switch input:checked + .toggle-slider { background:rgba(245,200,66,0.2); border-color:var(--accent); }
+  .toggle-switch input:checked + .toggle-slider::before { transform:translateX(20px); background:var(--accent); }
+
+  /* ── ZONE TIME SETTING ROW ── */
+  .zt-row { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--border); flex-wrap:wrap; }
+  .zt-row:last-child { border-bottom:none; }
+  .zt-icon { font-size:1.1rem; width:24px; flex-shrink:0; }
+  .zt-name { font-size:0.85rem; font-weight:600; flex:1; min-width:80px; }
+  .zt-range { font-size:0.68rem; color:var(--muted); }
+  .zt-input { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:6px 10px; color:var(--text); font-family:'DM Mono',monospace; font-size:0.82rem; width:100px; outline:none; transition:border-color 0.2s; }
+  .zt-input:focus { border-color:var(--accent); }
+
+  /* ── INLINE EDIT ── */
   .edit-btn { background:none; border:none; color:var(--muted); cursor:pointer; font-size:0.72rem; padding:2px 5px; transition:color 0.15s; flex-shrink:0; }
   .edit-btn:hover { color:var(--accent); }
   .task-edit-input {
@@ -826,6 +853,9 @@
       <button class="sidebar-btn" id="sb-bin" onclick="showView('bin',null,null,'sb-bin')">
         <span class="sb-icon">🗑️</span> Bin
       </button>
+      <button class="sidebar-btn" id="sb-settings" onclick="showView('settings',null,null,'sb-settings')">
+        <span class="sb-icon">⚙️</span> Settings
+      </button>
     </nav>
     <div class="sidebar-spacer"></div>
     <div class="sidebar-sync">
@@ -892,11 +922,12 @@
       </div>
 
       <div class="zones-grid">
-        <div class="zone-block">
+        <div class="zone-block" id="zone-block-flex">
           <div class="zone-header">
             <span class="zone-icon">☀️</span>
             <span class="zone-name">Flex Zone</span>
-            <span class="zone-time">Mid-morning → Afternoon</span>
+            <span class="zone-time" id="zone-time-flex">Mid-morning → Afternoon</span>
+            <span class="zone-now-badge" id="zone-now-flex" style="display:none;">NOW</span>
           </div>
           <div class="task-input-row">
             <input class="task-input" id="flex-input" placeholder="Add task or reactive item…" onkeydown="handleEnter(event,'flex')">
@@ -921,12 +952,14 @@
           <div id="capture-list" style="margin-top:10px;"></div>
         </div>
 
-        <div class="zone-block">
+        <div class="zone-block" id="zone-block-wind">
           <div class="zone-header">
             <span class="zone-icon">🌆</span>
             <span class="zone-name">Wind-Down</span>
-            <span class="zone-time">Late Afternoon</span>
+            <span class="zone-time" id="zone-time-wind">Late Afternoon</span>
+            <span class="zone-now-badge" id="zone-now-wind" style="display:none;">NOW</span>
           </div>
+          <p style="font-size:0.72rem;color:var(--muted);margin-bottom:10px;">Finishing up for the day…</p>
           <div class="task-input-row">
             <input class="task-input" id="wind-input" placeholder="Tomorrow's most important task…" onkeydown="handleEnter(event,'wind')">
             <button class="add-btn" onclick="addTask('wind')" style="background:var(--accent3)">+</button>
@@ -934,11 +967,12 @@
           <div class="task-list" id="wind-tasks"></div>
         </div>
 
-        <div class="zone-block">
+        <div class="zone-block" id="zone-block-night">
           <div class="zone-header">
             <span class="zone-icon">🌃</span>
             <span class="zone-name">Night Shift</span>
-            <span class="zone-time">Evening · Work Block</span>
+            <span class="zone-time" id="zone-time-night">Evening · Work Block</span>
+            <span class="zone-now-badge" id="zone-now-night" style="display:none;">NOW</span>
           </div>
           <div class="task-input-row">
             <input class="task-input" id="night-input" placeholder="Add night shift task…" onkeydown="handleEnter(event,'night')">
@@ -947,11 +981,12 @@
           <div class="task-list" id="night-tasks"></div>
         </div>
 
-        <div class="zone-block" style="grid-column:1/-1;">
+        <div class="zone-block" style="grid-column:1/-1;" id="zone-block-learn">
           <div class="zone-header">
             <span class="zone-icon">🌙</span>
             <span class="zone-name">Learning</span>
-            <span class="zone-time">Evening · 45–60 mins</span>
+            <span class="zone-time" id="zone-time-learn">Evening · 45–60 mins</span>
+            <span class="zone-now-badge" id="zone-now-learn" style="display:none;">NOW</span>
           </div>
           <div class="task-input-row">
             <input class="task-input" id="learn-input" placeholder="What are you studying tonight?" onkeydown="handleEnter(event,'learn')">
@@ -1025,6 +1060,33 @@
         <button class="lib-tab" id="libtab-completed" onclick="switchLibTab('completed')">✅ Completed</button>
       </div>
       <div id="lib-books-list"></div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div id="view-settings" class="view">
+      <div class="section-title">Zone Times</div>
+      <p style="font-size:0.78rem;color:var(--muted);margin-bottom:16px;">Set when each zone starts. The end time is automatically 10 minutes before the next zone begins.</p>
+      <div class="zone-block" style="margin-bottom:16px;">
+        <div id="zone-time-settings"></div>
+        <button class="save-btn" style="margin-top:16px;" onclick="saveZoneTimes()">Save Zone Times</button>
+      </div>
+      <div class="section-title" style="margin-top:8px;">General</div>
+      <div class="zone-block">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);">
+          <div>
+            <div style="font-size:0.85rem;font-weight:600;">Auto-highlight active zone</div>
+            <div style="font-size:0.72rem;color:var(--muted);">Show NOW badge on the current time zone</div>
+          </div>
+          <label class="toggle-switch"><input type="checkbox" id="setting-highlight" checked onchange="saveGeneralSettings()"><span class="toggle-slider"></span></label>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;">
+          <div>
+            <div style="font-size:0.85rem;font-weight:600;">Zone transition toast</div>
+            <div style="font-size:0.72rem;color:var(--muted);">Notify when a new zone becomes active</div>
+          </div>
+          <label class="toggle-switch"><input type="checkbox" id="setting-toast" checked onchange="saveGeneralSettings()"><span class="toggle-slider"></span></label>
+        </div>
+      </div>
     </div>
 
     <!-- BIN -->
@@ -1101,6 +1163,7 @@
   <button class="nav-btn" id="nav-schedule" onclick="showView('schedule',null,'nav-schedule')"><span class="nav-icon">📋</span>Schedule</button>
   <button class="nav-btn" id="nav-library" onclick="showView('library',null,'nav-library')"><span class="nav-icon">📚</span>Library</button>
   <button class="nav-btn" id="nav-bin" onclick="showView('bin',null,'nav-bin')"><span class="nav-icon">🗑️</span>Bin</button>
+  <button class="nav-btn" id="nav-settings" onclick="showView('settings',null,'nav-settings')"><span class="nav-icon">⚙️</span>Settings</button>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -1518,6 +1581,11 @@ async function initApp() {
   renderCaptures(ds);
   await loadCarryOver();
   await renderCurrentRead();
+  await loadSettings();
+  updateZoneTimeLabels();
+  updateActiveZone();
+  // Check every minute for zone transitions
+  setInterval(() => updateActiveZone(), 60000);
 }
 
 // ── ANCHOR STATUS ─────────────────────────────────
@@ -1703,6 +1771,7 @@ window.showView = async function(id, tabBtn, navId, sbId) {
   if(id==='bin') await renderBin();
   if(id==='library') await renderLibrary();
   if(id==='schedule') { await migrateScheduleFromDays(); await loadSchedule(); renderSchedule(); }
+  if(id==='settings') { await loadSettings(); renderSettingsView(); }
 };
 
 async function renderWeek() {
@@ -2238,6 +2307,162 @@ window.resetAnchorEdit = async function(key, dayIdx) {
   showToast('Reset to default ✓');
   if (key === dateKey()) initApp();
 };
+
+// ── SETTINGS ──────────────────────────────────────
+const DEFAULT_ZONE_TIMES = {
+  flex:  { start:'08:00' },
+  wind:  { start:'13:00' },
+  night: { start:'18:00' },
+  learn: { start:'21:00' },
+};
+const ZONE_DEFS = [
+  { key:'flex',  icon:'☀️', name:'Flex Zone' },
+  { key:'wind',  icon:'🌆', name:'Wind-Down' },
+  { key:'night', icon:'🌃', name:'Night Shift' },
+  { key:'learn', icon:'🌙', name:'Learning' },
+];
+let settingsCache = null;
+
+function settingsDocRef() { return doc(db,'users',currentUser.uid,'meta','settings'); }
+
+async function loadSettings() {
+  try {
+    const snap = await getDoc(settingsDocRef());
+    settingsCache = snap.exists() ? snap.data() : { zoneTimes: {...DEFAULT_ZONE_TIMES}, highlight:true, toastOnTransition:true };
+  } catch(e) { settingsCache = settingsCache || { zoneTimes: {...DEFAULT_ZONE_TIMES}, highlight:true, toastOnTransition:true }; }
+  if (!settingsCache.zoneTimes) settingsCache.zoneTimes = {...DEFAULT_ZONE_TIMES};
+  return settingsCache;
+}
+
+async function saveSettings() {
+  try { await setDoc(settingsDocRef(), settingsCache); } catch(e) {}
+}
+
+function timeToMinutes(t) {
+  const [h,m] = t.split(':').map(Number);
+  return h*60 + m;
+}
+
+function minutesToTime(m) {
+  const h = Math.floor(m/60) % 24;
+  const mm = m % 60;
+  return `${String(h).padStart(2,'0')}:${String(mm).padStart(2,'0')}`;
+}
+
+function getZoneEndTime(zoneKey) {
+  const keys = ZONE_DEFS.map(z => z.key);
+  const idx = keys.indexOf(zoneKey);
+  const zt = settingsCache?.zoneTimes || DEFAULT_ZONE_TIMES;
+  if (idx < keys.length - 1) {
+    const nextStart = timeToMinutes(zt[keys[idx+1]]?.start || DEFAULT_ZONE_TIMES[keys[idx+1]].start);
+    return minutesToTime(nextStart - 10);
+  }
+  return '23:00';
+}
+
+function renderSettingsView() {
+  const zt = settingsCache?.zoneTimes || DEFAULT_ZONE_TIMES;
+  document.getElementById('zone-time-settings').innerHTML = ZONE_DEFS.map(z => {
+    const start = zt[z.key]?.start || DEFAULT_ZONE_TIMES[z.key].start;
+    const end = getZoneEndTime(z.key);
+    return `<div class="zt-row">
+      <span class="zt-icon">${z.icon}</span>
+      <span class="zt-name">${z.name}</span>
+      <div style="display:flex;flex-direction:column;gap:3px;align-items:flex-end">
+        <input class="zt-input" type="time" id="zt-${z.key}" value="${start}" oninput="updateZoneEndPreview()">
+        <span class="zt-range" id="zt-end-${z.key}">ends ${end}</span>
+      </div>
+    </div>`;
+  }).join('');
+  // Restore general settings toggles
+  const s = settingsCache || {};
+  const hlEl = document.getElementById('setting-highlight');
+  const toastEl = document.getElementById('setting-toast');
+  if (hlEl) hlEl.checked = s.highlight !== false;
+  if (toastEl) toastEl.checked = s.toastOnTransition !== false;
+}
+
+window.updateZoneEndPreview = function() {
+  // Temporarily update cache from inputs to recalculate ends
+  const zt = {};
+  ZONE_DEFS.forEach(z => { const el = document.getElementById(`zt-${z.key}`); if(el) zt[z.key] = { start: el.value }; });
+  const prev = settingsCache.zoneTimes;
+  settingsCache.zoneTimes = zt;
+  ZONE_DEFS.forEach(z => { const el = document.getElementById(`zt-end-${z.key}`); if(el) el.textContent = `ends ${getZoneEndTime(z.key)}`; });
+  settingsCache.zoneTimes = prev;
+};
+
+window.saveZoneTimes = async function() {
+  const zt = {};
+  ZONE_DEFS.forEach(z => { const el = document.getElementById(`zt-${z.key}`); if(el) zt[z.key] = { start: el.value }; });
+  settingsCache.zoneTimes = zt;
+  await saveSettings();
+  renderSettingsView();
+  updateActiveZone();
+  updateZoneTimeLabels();
+  showToast('Zone times saved ✓');
+};
+
+window.saveGeneralSettings = async function() {
+  settingsCache.highlight = document.getElementById('setting-highlight')?.checked !== false;
+  settingsCache.toastOnTransition = document.getElementById('setting-toast')?.checked !== false;
+  await saveSettings();
+  updateActiveZone();
+};
+
+// ── ACTIVE ZONE DETECTION ──────────────────────────
+let lastActiveZone = null;
+
+function getActiveZone() {
+  if (!settingsCache) return null;
+  const now = new Date();
+  const cur = now.getHours()*60 + now.getMinutes();
+  const zt = settingsCache.zoneTimes || DEFAULT_ZONE_TIMES;
+  const keys = ZONE_DEFS.map(z => z.key);
+  let active = null;
+  keys.forEach((key, i) => {
+    const start = timeToMinutes(zt[key]?.start || DEFAULT_ZONE_TIMES[key].start);
+    const end = i < keys.length-1
+      ? timeToMinutes(zt[keys[i+1]]?.start || DEFAULT_ZONE_TIMES[keys[i+1]].start) - 10
+      : 23*60;
+    if (cur >= start && cur < end) active = key;
+  });
+  return active;
+}
+
+function updateZoneTimeLabels() {
+  if (!settingsCache) return;
+  const zt = settingsCache.zoneTimes || DEFAULT_ZONE_TIMES;
+  ZONE_DEFS.forEach(z => {
+    const el = document.getElementById(`zone-time-${z.key}`);
+    if (!el) return;
+    const start = zt[z.key]?.start || DEFAULT_ZONE_TIMES[z.key].start;
+    const end = getZoneEndTime(z.key);
+    el.textContent = `${start} – ${end}`;
+  });
+}
+
+function updateActiveZone() {
+  if (!settingsCache) return;
+  const highlight = settingsCache.highlight !== false;
+  const active = getActiveZone();
+
+  ZONE_DEFS.forEach(z => {
+    const block = document.getElementById(`zone-block-${z.key}`);
+    const badge = document.getElementById(`zone-now-${z.key}`);
+    if (!block || !badge) return;
+    const isActive = highlight && active === z.key;
+    block.classList.toggle('zone-active', isActive);
+    badge.style.display = isActive ? 'inline-block' : 'none';
+  });
+
+  // Toast on zone transition
+  if (settingsCache.toastOnTransition && active && active !== lastActiveZone && lastActiveZone !== null) {
+    const def = ZONE_DEFS.find(z => z.key === active);
+    if (def) showToast(`${def.icon} ${def.name} time — let's go!`);
+  }
+  lastActiveZone = active;
+}
 
 // ── INLINE EDITING ────────────────────────────────
 function inlineEditEl(el, onSave) {
