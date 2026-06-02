@@ -1496,9 +1496,10 @@ async function initApp() {
   const d = DAYS[todayIdx];
   const card = document.getElementById('anchor-card');
   card.style.setProperty('--day-color', d.color);
+  const todayDs = await loadDay(dateKey());
   document.getElementById('anchor-day-name').textContent = d.full;
-  document.getElementById('anchor-title').textContent = d.domain;
-  document.getElementById('anchor-desc').textContent = d.sub + ' Phone face-down. Capture list ready.';
+  document.getElementById('anchor-title').textContent = todayDs?.anchorDomain || d.domain;
+  document.getElementById('anchor-desc').textContent = (todayDs?.anchorSub || d.sub) + ' Phone face-down. Capture list ready.';
 
   const opts = {weekday:'short', month:'short', day:'numeric'};
   document.getElementById('date-label').textContent = today.toLocaleDateString('en-GB', opts);
@@ -1710,20 +1711,37 @@ async function renderWeek() {
   const dayData = await Promise.all(weekKeys.map(({key})=>loadDay(key)));
   grid.innerHTML = weekKeys.map(({key,dayIdx},i)=>{
     const d = DAYS[dayIdx];
-    const status = dayData[i]?.anchorStatus || null;
+    const ds = dayData[i];
+    const status = ds?.anchorStatus || null;
     const isToday = key===todayK;
     const label = new Date(key).toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
+    // Use saved overrides if present, otherwise defaults
+    const domainName = ds?.anchorDomain || d.domain;
+    const domainSub  = ds?.anchorSub   || d.sub;
     return `
-      <div class="week-row ${isToday?'today-row':''}" style="--day-color:${d.color}">
+      <div class="week-row ${isToday?'today-row':''}" style="--day-color:${d.color}" id="week-row-${key}">
         <div class="week-day-name" style="cursor:pointer" onclick="openDayDetail('${key}','${label}')">${d.name}</div>
-        <div class="week-domain" style="cursor:pointer" onclick="openDayDetail('${key}','${label}')">
-          <div class="week-domain-name">${d.icon} ${d.domain}</div>
-          <div class="week-domain-sub">${isToday?'← TODAY':''}</div>
+        <div class="week-domain">
+          <div class="week-domain-name" id="wdn-${key}">${d.icon} ${escHtml(domainName)}</div>
+          <div class="week-domain-sub" id="wds-${key}">${isToday?'← TODAY · ':''}<span style="font-size:0.65rem;color:var(--muted)">${escHtml(domainSub)}</span></div>
         </div>
-        <div class="week-status-btns">
-          <div class="mini-status ${status==='done'?'sel-done':''}" onclick="setWeekStatus('${key}','done')">✅</div>
-          <div class="mini-status ${status==='partial'?'sel-partial':''}" onclick="setWeekStatus('${key}','partial')">⚡</div>
-          <div class="mini-status ${status==='missed'?'sel-missed':''}" onclick="setWeekStatus('${key}','missed')">❌</div>
+        <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
+          <button class="edit-btn" onclick="editAnchor('${key}','${dayIdx}')" title="Edit anchor">✏️</button>
+          <div class="week-status-btns">
+            <div class="mini-status ${status==='done'?'sel-done':''}" onclick="setWeekStatus('${key}','done')">✅</div>
+            <div class="mini-status ${status==='partial'?'sel-partial':''}" onclick="setWeekStatus('${key}','partial')">⚡</div>
+            <div class="mini-status ${status==='missed'?'sel-missed':''}" onclick="setWeekStatus('${key}','missed')">❌</div>
+          </div>
+        </div>
+      </div>
+      <div id="anchor-edit-${key}" style="display:none;padding:10px 14px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:0 0 12px 12px;margin-top:-8px;margin-bottom:8px;">
+        <div style="font-size:0.65rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">Edit Anchor</div>
+        <input id="anchor-domain-${key}" class="task-input" style="margin-bottom:8px;" value="${escHtml(domainName)}" placeholder="Domain / focus area">
+        <input id="anchor-sub-${key}" class="task-input" style="margin-bottom:10px;" value="${escHtml(domainSub)}" placeholder="Description">
+        <div style="display:flex;gap:8px;">
+          <button class="book-save-btn" onclick="saveAnchorEdit('${key}')">Save</button>
+          <button class="cr-change-btn" onclick="resetAnchorEdit('${key}','${dayIdx}')">Reset to default</button>
+          <button class="cr-change-btn" onclick="document.getElementById('anchor-edit-${key}').style.display='none'">Cancel</button>
         </div>
       </div>`;
   }).join('');
@@ -2183,6 +2201,39 @@ window.clearBin = async function() {
   await saveBin([]);
   await renderBin();
   showToast('Bin emptied');
+};
+
+// ── ANCHOR EDITING (Week view) ────────────────────
+window.editAnchor = function(key, dayIdx) {
+  const panel = document.getElementById(`anchor-edit-${key}`);
+  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+};
+
+window.saveAnchorEdit = async function(key) {
+  const domain = document.getElementById(`anchor-domain-${key}`).value.trim();
+  const sub    = document.getElementById(`anchor-sub-${key}`).value.trim();
+  if (!domain) return;
+  const ds = await loadDay(key);
+  ds.anchorDomain = domain;
+  ds.anchorSub    = sub;
+  await saveDay(key, ds);
+  document.getElementById(`anchor-edit-${key}`).style.display = 'none';
+  await renderWeek();
+  showToast('Anchor updated ✓');
+  // Also refresh Today if this key is today
+  if (key === dateKey()) initApp();
+};
+
+window.resetAnchorEdit = async function(key, dayIdx) {
+  const d = DAYS[parseInt(dayIdx)];
+  const ds = await loadDay(key);
+  delete ds.anchorDomain;
+  delete ds.anchorSub;
+  await saveDay(key, ds);
+  document.getElementById(`anchor-edit-${key}`).style.display = 'none';
+  await renderWeek();
+  showToast('Reset to default ✓');
+  if (key === dateKey()) initApp();
 };
 
 // ── INLINE EDITING ────────────────────────────────
