@@ -13,25 +13,30 @@
     --border: #2c3236;
     --text: #ffffff;
     --muted: #5a6470;
-    --silver: #8a96a0;
-    --silver-bright: #c0c8d0;
-    --accent: #c0c8d0;
+    --cyan: #00d4ff;
+    --cyan-dim: rgba(0,212,255,0.12);
+    --cyan-glow: rgba(0,212,255,0.08);
+    --accent: #00d4ff;
     --accent2: #c0394b;
-    --accent3: #27ae60;
+    --accent3: #00d4ff;
+    --silver: #00d4ff;
+    --silver-bright: #00d4ff;
     --success: #27ae60;
-    --partial: #8a96a0;
+    --partial: #00d4ff;
     --missed: #c0394b;
-    --geco: #8a96a0;
-    --qs: #8a96a0;
+    --geco: #00d4ff;
+    --qs: #00d4ff;
     --health: #27ae60;
-    --learning: #8a96a0;
-    --wildcard: #8a96a0;
-    --review: #8a96a0;
+    --learning: #00d4ff;
+    --wildcard: #00d4ff;
+    --review: #00d4ff;
   }
 
-  /* ── GLOBAL EMOJI / ICON SILVER ── */
+  /* ── GLOBAL EMOJI / ICON CYAN ── */
   .zone-icon, .nav-icon, .sb-icon, .icon, .bin-icon,
-  .anchor-label, .completion-emoji { filter: grayscale(1) brightness(1.4); }
+  .anchor-label, .completion-emoji {
+    filter: grayscale(1) sepia(1) saturate(4) hue-rotate(155deg) brightness(1.15);
+  }
 
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
@@ -240,7 +245,7 @@
   }
   .status-btn .icon { font-size: 1.2rem; }
   .status-btn.selected-done { background: rgba(39,174,96,0.15); border-color: var(--success); color: var(--success); }
-  .status-btn.selected-partial { background: rgba(138,150,160,0.15); border-color: var(--partial); color: var(--partial); }
+  .status-btn.selected-partial { background: rgba(0,212,255,0.12); border-color: var(--partial); color: var(--partial); }
   .status-btn.selected-missed { background: rgba(192,57,75,0.15); border-color: var(--missed); color: var(--missed); }
 
   .zone-block {
@@ -317,7 +322,7 @@
     display: flex; align-items: center; justify-content: center; transition: all 0.15s;
   }
   .mini-status.sel-done { background: rgba(39,174,96,0.15); border-color: var(--success); }
-  .mini-status.sel-partial { background: rgba(138,150,160,0.15); border-color: var(--partial); }
+  .mini-status.sel-partial { background: rgba(0,212,255,0.12); border-color: var(--partial); }
   .mini-status.sel-missed { background: rgba(192,57,75,0.15); border-color: var(--missed); }
 
   /* ── REVIEW ── */
@@ -349,7 +354,7 @@
     background: var(--surface2); color: var(--muted); border: 1px solid var(--border);
   }
   .hist-dot.done { background: rgba(39,174,96,0.15); border-color: var(--success); color: var(--success); }
-  .hist-dot.partial { background: rgba(138,150,160,0.15); border-color: var(--partial); color: var(--partial); }
+  .hist-dot.partial { background: rgba(0,212,255,0.12); border-color: var(--partial); color: var(--partial); }
   .hist-dot.missed { background: rgba(192,57,75,0.15); border-color: var(--missed); color: var(--missed); }
   .save-btn {
     width: 100%; background: var(--accent); color: #000; border: none;
@@ -453,19 +458,19 @@
 /* ── ACTIVE ZONE ── */
   .zone-now-badge {
     font-size:0.58rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase;
-    background:rgba(255,255,255,0.12); color:var(--text);
-    border:1px solid rgba(255,255,255,0.25);
+    background:rgba(0,212,255,0.15); color:var(--cyan);
+    border:1px solid rgba(0,212,255,0.4);
     border-radius:4px; padding:2px 8px; margin-left:6px; flex-shrink:0;
   }
   .zone-block.zone-active {
-    border-color: rgba(255,255,255,0.25);
-    background: linear-gradient(160deg, rgba(255,255,255,0.04) 0%, var(--surface) 60%);
+    border-color: rgba(0,212,255,0.45);
+    background: linear-gradient(160deg, rgba(0,212,255,0.05) 0%, var(--surface) 60%);
     animation: zoneGlow 3s ease-in-out infinite;
     position: relative;
   }
   @keyframes zoneGlow {
-    0%,100% { box-shadow: 0 0 0 1px rgba(255,255,255,0.08), 0 0 20px rgba(255,255,255,0.06), 0 4px 32px rgba(255,255,255,0.03); }
-    50%      { box-shadow: 0 0 0 1px rgba(255,255,255,0.20), 0 0 36px rgba(255,255,255,0.12), 0 6px 56px rgba(255,255,255,0.06); }
+    0%,100% { box-shadow: 0 0 0 1px rgba(0,212,255,0.15), 0 0 20px rgba(0,212,255,0.10), 0 4px 32px rgba(0,212,255,0.05); }
+    50%      { box-shadow: 0 0 0 1px rgba(0,212,255,0.40), 0 0 36px rgba(0,212,255,0.20), 0 6px 56px rgba(0,212,255,0.10); }
   }
 
   /* ── TOGGLE SWITCH ── */
@@ -473,7 +478,7 @@
   .toggle-switch input { opacity:0; width:0; height:0; }
   .toggle-slider { position:absolute; cursor:pointer; inset:0; background:var(--surface2); border:1px solid var(--border); border-radius:24px; transition:background 0.2s; }
   .toggle-slider::before { content:''; position:absolute; height:18px; width:18px; left:2px; bottom:2px; background:var(--muted); border-radius:50%; transition:transform 0.2s, background 0.2s; }
-  .toggle-switch input:checked + .toggle-slider { background:rgba(255,255,255,0.12); border-color:var(--accent); }
+  .toggle-switch input:checked + .toggle-slider { background:rgba(0,212,255,0.12); border-color:var(--cyan); }
   .toggle-switch input:checked + .toggle-slider::before { transform:translateX(20px); background:var(--accent); }
 
   /* ── ZONE TIME SETTING ROW ── */
@@ -610,7 +615,7 @@
   /* ── LIBRARY VIEW ── */
   .library-tabs { display:flex; gap:6px; margin-bottom:20px; flex-wrap:wrap; }
   .lib-tab { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:7px 14px; font-size:0.72rem; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; color:var(--muted); cursor:pointer; transition:all 0.2s; }
-  .lib-tab.active { background:rgba(96,165,250,0.15); border-color:var(--silver); color:var(--learning); }
+  .lib-tab.active { background:rgba(0,212,255,0.10); border-color:var(--cyan); color:var(--cyan); }
   .book-card {
     background:var(--surface); border:1px solid var(--border); border-radius:14px;
     padding:16px; margin-bottom:10px; display:flex; flex-direction:column; gap:8px;
@@ -618,8 +623,8 @@
   .book-card-header { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
   .book-title-text { font-size:0.9rem; font-weight:600; color:var(--text); }
   .book-status-badge { font-size:0.6rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:3px 8px; border-radius:20px; white-space:nowrap; }
-  .badge-reading { background:rgba(138,150,160,0.12); color:var(--silver-bright); }
-  .badge-want { background:rgba(138,150,160,0.08); color:var(--silver); }
+  .badge-reading { background:rgba(0,212,255,0.10); color:var(--silver-bright); }
+  .badge-want { background:rgba(0,212,255,0.07); color:var(--silver); }
   .badge-completed { background:rgba(39,174,96,0.15); color:var(--success); }
   .book-progress-row { display:flex; align-items:center; gap:8px; }
   .book-del-btn { background:none; border:none; color:var(--muted); cursor:pointer; font-size:0.85rem; padding:2px; }
@@ -714,7 +719,7 @@
       transition: all 0.2s; text-align: left; width: 100%;
     }
     .sidebar-btn:hover { background: var(--surface2); color: var(--text); }
-    .sidebar-btn.active { background: rgba(255,255,255,0.08); color: var(--accent); }
+    .sidebar-btn.active { background: rgba(0,212,255,0.10); color: var(--cyan); }
     .sb-icon { font-size: 1.1rem; }
     .sidebar-spacer { flex: 1; }
     .sidebar-sync {
@@ -1209,19 +1214,19 @@ const firebaseConfig = {
 const CONFIG_FILLED = !firebaseConfig.apiKey.includes("REPLACE");
 
 const DAYS = [
-  { name:'SUN', full:'SUNDAY',    domain:'Weekly Review',      sub:'Plan ahead. Review wins and stalls.',              color:'var(--silver)',  icon:'○' },
-  { name:'MON', full:'MONDAY',    domain:'GECO — Production',  sub:'Wacky Ancestors / Jam Pass production work.',      color:'var(--silver)',  icon:'○' },
-  { name:'TUE', full:'TUESDAY',   domain:'Construction / QS',  sub:'Tender prep, BOQ pricing, RFQ work.',              color:'var(--silver)',  icon:'○' },
-  { name:'WED', full:'WEDNESDAY', domain:'GECO — Strategy',    sub:'Documentation, funding, pitch, partnerships.',     color:'var(--silver)',  icon:'○' },
-  { name:'THU', full:'THURSDAY',  domain:'Construction / QS',  sub:'Compliance review, pricing checks, follow-ups.',   color:'var(--silver)',  icon:'○' },
+  { name:'SUN', full:'SUNDAY',    domain:'Weekly Review',      sub:'Plan ahead. Review wins and stalls.',              color:'var(--cyan)',  icon:'○' },
+  { name:'MON', full:'MONDAY',    domain:'GECO — Production',  sub:'Wacky Ancestors / Jam Pass production work.',      color:'var(--cyan)',  icon:'○' },
+  { name:'TUE', full:'TUESDAY',   domain:'Construction / QS',  sub:'Tender prep, BOQ pricing, RFQ work.',              color:'var(--cyan)',  icon:'○' },
+  { name:'WED', full:'WEDNESDAY', domain:'GECO — Strategy',    sub:'Documentation, funding, pitch, partnerships.',     color:'var(--cyan)',  icon:'○' },
+  { name:'THU', full:'THURSDAY',  domain:'Construction / QS',  sub:'Compliance review, pricing checks, follow-ups.',   color:'var(--cyan)',  icon:'○' },
   { name:'FRI', full:'FRIDAY',    domain:'Health & Fitness',   sub:'Movement, meal prep, body audit.',                 color:'var(--success)', icon:'○' },
-  { name:'SAT', full:'SATURDAY',  domain:'Wildcard',           sub:'Most urgent task across all domains.',             color:'var(--silver)',  icon:'○' },
+  { name:'SAT', full:'SATURDAY',  domain:'Wildcard',           sub:'Most urgent task across all domains.',             color:'var(--cyan)',  icon:'○' },
 ];
 
 const DOMAIN_COLORS = {
-  'GECO — Production':'var(--silver)', 'GECO — Strategy':'var(--silver)',
-  'Construction / QS':'var(--silver)', 'Health & Fitness':'var(--success)',
-  'Wildcard':'var(--silver)',          'Weekly Review':'var(--silver)',
+  'GECO — Production':'var(--cyan)', 'GECO — Strategy':'var(--cyan)',
+  'Construction / QS':'var(--cyan)', 'Health & Fitness':'var(--success)',
+  'Wildcard':'var(--cyan)',           'Weekly Review':'var(--cyan)',
 };
 
 let app, auth, db, currentUser, unsubscribe;
