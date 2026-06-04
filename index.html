@@ -457,7 +457,7 @@
     border:1px solid rgba(0,212,255,0.4);
     border-radius:4px; padding:2px 8px; margin-left:6px; flex-shrink:0;
   }
-  .zone-block.zone-active {
+  .zone-block.zone-active, .today-anchor.zone-active {
     border-color: rgba(0,212,255,0.45);
     background: linear-gradient(160deg, rgba(0,212,255,0.05) 0%, var(--surface) 60%);
     animation: zoneGlow 3s ease-in-out infinite;
@@ -2458,7 +2458,32 @@ function updateZoneTimeLabels() {
 function updateActiveZone() {
   const highlight = settingsCache ? settingsCache.highlight !== false : true;
   const active = getActiveZone();
+  const zt = settingsCache?.zoneTimes || DEFAULT_ZONE_TIMES;
 
+  // Anchor is active during the window before Flex Zone starts
+  const now = new Date();
+  const cur = now.getHours()*60 + now.getMinutes();
+  const flexStart = timeToMinutes(zt['flex']?.start || DEFAULT_ZONE_TIMES['flex'].start);
+  const anchorActive = highlight && active === null && cur < flexStart;
+
+  // Anchor card
+  const anchorCard = document.getElementById('anchor-card');
+  if (anchorCard) {
+    anchorCard.classList.toggle('zone-active', anchorActive);
+    // Badge inside anchor label row
+    let anchorBadge = document.getElementById('anchor-now-badge');
+    if (!anchorBadge && anchorActive) {
+      anchorBadge = document.createElement('span');
+      anchorBadge.id = 'anchor-now-badge';
+      anchorBadge.className = 'zone-now-badge';
+      anchorBadge.textContent = 'NOW';
+      const label = anchorCard.querySelector('.anchor-label');
+      if (label) label.appendChild(anchorBadge);
+    }
+    if (anchorBadge) anchorBadge.style.display = anchorActive ? 'inline-block' : 'none';
+  }
+
+  // Zone blocks
   ZONE_DEFS.forEach(z => {
     const block = document.getElementById(`zone-block-${z.key}`);
     const badge = document.getElementById(`zone-now-${z.key}`);
@@ -2469,11 +2494,12 @@ function updateActiveZone() {
   });
 
   // Toast on zone transition
-  if (settingsCache.toastOnTransition && active && active !== lastActiveZone && lastActiveZone !== null) {
-    const def = ZONE_DEFS.find(z => z.key === active);
-    if (def) showToast(`${def.icon} ${def.name} time — let's go!`);
+  const newZone = anchorActive ? 'anchor' : active;
+  if (settingsCache?.toastOnTransition && newZone && newZone !== lastActiveZone && lastActiveZone !== null) {
+    const label = newZone === 'anchor' ? '⚓ Anchor Block' : (ZONE_DEFS.find(z => z.key === newZone)?.name || '');
+    if (label) showToast(`${label} time — let's go!`);
   }
-  lastActiveZone = active;
+  lastActiveZone = anchorActive ? 'anchor' : active;
 }
 
 // ── INLINE EDITING ────────────────────────────────
