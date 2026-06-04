@@ -450,7 +450,23 @@
   }
   .signin-btn:active { transform: scale(0.97); opacity: 0.85; }
 
-/* ── ACTIVE ZONE ── */
+/* ── RESTING BLOCK ── */
+  .rest-block {
+    grid-column: 1 / -1;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; padding: 36px 24px;
+    text-align: center; margin-top: 4px; transition: border-color 0.4s;
+  }
+  .rest-block.zone-active {
+    border-color: rgba(0,212,255,0.45);
+    background: linear-gradient(160deg, rgba(0,212,255,0.04) 0%, var(--surface) 60%);
+    animation: zoneGlow 3s ease-in-out infinite;
+  }
+  .rest-symbols { font-size: 2rem; letter-spacing: 0.25em; margin-bottom: 18px; display: block; }
+  .rest-message { font-size: 1.05rem; font-weight: 500; color: var(--text); line-height: 1.7; margin-bottom: 8px; }
+  .rest-time-label { font-size: 0.63rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
+
+  /* ── ACTIVE ZONE ── */
   .zone-now-badge {
     font-size:0.58rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase;
     background:rgba(0,212,255,0.15); color:var(--cyan);
@@ -1036,6 +1052,14 @@
             </div>
           </div>
         </div>
+
+        <!-- Resting -->
+        <div class="rest-block" id="zone-block-rest">
+          <span class="zone-now-badge" id="zone-now-rest" style="display:none;margin-bottom:14px;">NOW</span>
+          <span class="rest-symbols">🌙 ✦ 💤 ✦ 🌙</span>
+          <div class="rest-message" id="rest-message-text">Good Night. Tomorrow you conquer again.</div>
+          <div class="rest-time-label" id="zone-time-rest">After Learning</div>
+        </div>
       </div>
     </div>
 
@@ -1099,6 +1123,12 @@
           </div>
           <label class="toggle-switch"><input type="checkbox" id="setting-toast" checked onchange="saveGeneralSettings()"><span class="toggle-slider"></span></label>
         </div>
+      </div>
+      <div class="section-title" style="margin-top:20px;">Good Night Message</div>
+      <div class="zone-block">
+        <p style="font-size:0.75rem;color:var(--muted);margin-bottom:12px;">Shown on the Resting block at the end of the day.</p>
+        <textarea class="review-textarea" id="setting-rest-message" placeholder="Good Night. Tomorrow you conquer again." style="min-height:60px;"></textarea>
+        <button class="save-btn" style="margin-top:10px;" onclick="saveRestMessage()">Save Message</button>
       </div>
     </div>
 
@@ -2375,6 +2405,10 @@ function getZoneEndTime(zoneKey) {
 }
 
 function renderSettingsView() {
+  // Populate rest message
+  const rmEl = document.getElementById('setting-rest-message');
+  if (rmEl) rmEl.value = settingsCache?.restMessage || DEFAULT_REST_MESSAGE;
+
   const zt = settingsCache?.zoneTimes || DEFAULT_ZONE_TIMES;
   document.getElementById('zone-time-settings').innerHTML = ZONE_DEFS.map(z => {
     const start = zt[z.key]?.start || DEFAULT_ZONE_TIMES[z.key].start;
@@ -2424,7 +2458,18 @@ window.saveGeneralSettings = async function() {
   updateActiveZone();
 };
 
+window.saveRestMessage = async function() {
+  const val = document.getElementById('setting-rest-message')?.value.trim();
+  if (!val) return;
+  settingsCache.restMessage = val;
+  await saveSettings();
+  const el = document.getElementById('rest-message-text');
+  if (el) el.textContent = val;
+  showToast('Message saved ✓');
+};
+
 // ── ACTIVE ZONE DETECTION ──────────────────────────
+const DEFAULT_REST_MESSAGE = 'Good Night. Tomorrow you conquer again.';
 let lastActiveZone = null;
 
 function getActiveZone() {
@@ -2460,11 +2505,32 @@ function updateActiveZone() {
   const active = getActiveZone();
   const zt = settingsCache?.zoneTimes || DEFAULT_ZONE_TIMES;
 
-  // Anchor is active during the window before Flex Zone starts
   const now = new Date();
   const cur = now.getHours()*60 + now.getMinutes();
-  const flexStart = timeToMinutes(zt['flex']?.start || DEFAULT_ZONE_TIMES['flex'].start);
-  const anchorActive = highlight && active === null && cur < flexStart;
+  const flexStart  = timeToMinutes(zt['flex']?.start  || DEFAULT_ZONE_TIMES['flex'].start);
+  const learnStart = timeToMinutes(zt['learn']?.start || DEFAULT_ZONE_TIMES['learn'].start);
+  const learnEnd   = timeToMinutes(getZoneEndTime('learn')); // last zone, defaults to 23:00
+
+  // Rest: after learning end → until anchor window (2h before flex next morning)
+  const anchorWindowStart = (flexStart - 120 + 1440) % 1440; // 2h before flex, wraps midnight
+  const restActive = highlight && active === null && (cur >= learnEnd || cur < anchorWindowStart);
+  // Anchor: from anchorWindowStart until flexStart
+  const anchorActive = highlight && active === null && cur >= anchorWindowStart && cur < flexStart;
+
+  // Update rest message text
+  const restMsg = settingsCache?.restMessage || DEFAULT_REST_MESSAGE;
+  const restEl = document.getElementById('rest-message-text');
+  if (restEl) restEl.textContent = restMsg;
+
+  // Rest block
+  const restBlock = document.getElementById('zone-block-rest');
+  const restBadge = document.getElementById('zone-now-rest');
+  if (restBlock) restBlock.classList.toggle('zone-active', restActive);
+  if (restBadge) restBadge.style.display = restActive ? 'inline-block' : 'none';
+
+  // Rest time label
+  const restLabel = document.getElementById('zone-time-rest');
+  if (restLabel) restLabel.textContent = restActive ? `${minutesToTime(learnEnd)} until ${minutesToTime(anchorWindowStart)}` : 'After Learning';
 
   // Anchor card
   const anchorCard = document.getElementById('anchor-card');
@@ -2494,12 +2560,13 @@ function updateActiveZone() {
   });
 
   // Toast on zone transition
-  const newZone = anchorActive ? 'anchor' : active;
+  const newZone = restActive ? 'rest' : anchorActive ? 'anchor' : active;
   if (settingsCache?.toastOnTransition && newZone && newZone !== lastActiveZone && lastActiveZone !== null) {
-    const label = newZone === 'anchor' ? '⚓ Anchor Block' : (ZONE_DEFS.find(z => z.key === newZone)?.name || '');
-    if (label) showToast(`${label} time — let's go!`);
+    const labels = { rest:'🌙 Rest', anchor:'⚓ Anchor Block' };
+    const label = labels[newZone] || (ZONE_DEFS.find(z => z.key === newZone)?.name || '');
+    if (label) showToast(`${label} time${newZone === 'rest' ? ' — ' + restMsg : ' — let\'s go!'}`);
   }
-  lastActiveZone = anchorActive ? 'anchor' : active;
+  lastActiveZone = newZone;
 }
 
 // ── INLINE EDITING ────────────────────────────────
