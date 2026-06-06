@@ -4,6 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>ANKYRA v1</title>
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#0f1112">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ANKYRA">
+<link rel="apple-touch-icon" href="./icon-192.png">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -1107,6 +1113,12 @@
         <div id="zone-time-settings"></div>
         <button class="save-btn" style="margin-top:16px;" onclick="saveZoneTimes()">Save Zone Times</button>
       </div>
+      <div class="section-title" style="margin-top:8px;">Notifications</div>
+      <div class="zone-block" style="margin-bottom:16px;">
+        <p style="font-size:0.8rem;color:var(--text);font-weight:600;margin-bottom:4px;">Enable phone notifications</p>
+        <p style="font-size:0.73rem;color:var(--muted);margin-bottom:12px;line-height:1.5;">On Android: tap <strong style="color:var(--text);">Allow</strong> when prompted.<br>On iPhone: tap <strong style="color:var(--text);">Share → Add to Home Screen</strong> first, then open from there.</p>
+        <button class="save-btn" onclick="requestNotificationPermission().then(ok => showToast(ok ? '🔔 Notifications on!' : 'Permission denied — check browser settings', !ok))">Enable Notifications</button>
+      </div>
       <div class="section-title" style="margin-top:8px;">General</div>
       <div class="zone-block">
         <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);">
@@ -1257,7 +1269,42 @@ const DOMAIN_COLORS = {
 let app, auth, db, currentUser, unsubscribe;
 let localCache = {};
 let syncTimeout = null;
-let reviewWeekOffset = 0;  // 0 = current week, -1 = last week, etc.
+let reviewWeekOffset = 0;
+let swRegistration = null;
+
+// ── SERVICE WORKER + NOTIFICATIONS ────────────────
+async function initPWA() {
+  if ('serviceWorker' in navigator) {
+    try {
+      swRegistration = await navigator.serviceWorker.register('./sw.js', { scope: './' });
+    } catch(e) { console.warn('SW registration failed:', e); }
+  }
+}
+
+async function requestNotificationPermission() {
+  if (!('Notification' in window)) return false;
+  if (Notification.permission === 'granted') return true;
+  if (Notification.permission === 'denied') return false;
+  const perm = await Notification.requestPermission();
+  return perm === 'granted';
+}
+
+async function sendZoneNotification(title, body) {
+  const granted = await requestNotificationPermission();
+  if (!granted) return;
+  // Use SW if available (works in background on Android)
+  if (swRegistration) {
+    try {
+      await swRegistration.showNotification(title, {
+        body, tag: 'zone-change', renotify: true,
+        vibrate: [200, 100, 200], icon: './icon-192.png',
+      });
+      return;
+    } catch(e) {}
+  }
+  // Fallback: foreground notification
+  new Notification(title, { body, tag: 'zone-change' });
+}
 let allDaysLoaded = false;
 
 function dateKey(offset=0) {
@@ -1321,6 +1368,8 @@ function handleAuthChange(user) {
         document.getElementById('landing-screen').style.display = 'none';
         document.getElementById('main-app').style.display = 'block';
         document.getElementById('bottom-nav').style.display = 'flex';
+        initPWA();
+        requestNotificationPermission();
         initApp();
       });
     }, 1400);
@@ -2559,14 +2608,47 @@ function updateActiveZone() {
     badge.style.display = isActive ? 'inline-block' : 'none';
   });
 
-  // Toast on zone transition
+  // Zone transition
   const newZone = restActive ? 'rest' : anchorActive ? 'anchor' : active;
-  if (settingsCache?.toastOnTransition && newZone && newZone !== lastActiveZone && lastActiveZone !== null) {
-    const labels = { rest:'🌙 Rest', anchor:'⚓ Anchor Block' };
-    const label = labels[newZone] || (ZONE_DEFS.find(z => z.key === newZone)?.name || '');
-    if (label) showToast(`${label} time${newZone === 'rest' ? ' — ' + restMsg : ' — let\'s go!'}`);
+  if (newZone && newZone !== lastActiveZone && lastActiveZone !== null) {
+    const zoneLabels = { rest:'Rest', anchor:'Anchor Block', flex:'Flex Zone', wind:'Wind-Down', night:'Night Shift', learn:'Learning' };
+    const label = zoneLabels[newZone] || newZone;
+    const body = newZone === 'rest' ? restMsg : `Time to focus on ${label}. Let's go!`;
+
+    // Auto-migrate incomplete tasks from previous work zone → new work zone
+    const workZones = ['flex','wind','night','learn'];
+    if (workZones.includes(lastActiveZone) && workZones.includes(newZone)) {
+      migrateTasksOnZoneChange(lastActiveZone, newZone);
+    }
+
+    // In-app toast
+    if (settingsCache?.toastOnTransition) showToast(`${label} — ${newZone === 'rest' ? 'Good Night 🌙' : "let's go!"}`);
+
+    // Push notification (works on phone if PWA installed)
+    sendZoneNotification(`ANKYRA — ${label}`, body);
   }
   lastActiveZone = newZone;
+}
+
+// ── TASK AUTO-MIGRATION ON ZONE CHANGE ────────────
+async function migrateTasksOnZoneChange(fromZone, toZone) {
+  const zoneOrder = ['flex','wind','night','learn'];
+  const fi = zoneOrder.indexOf(fromZone), ti = zoneOrder.indexOf(toZone);
+  if (fi < 0 || ti <= fi) return; // only migrate forward
+  const dk = dateKey();
+  const ds = await loadDay(dk);
+  const incomplete = (ds.tasks[fromZone] || []).filter(t => !t.done);
+  if (!incomplete.length) return;
+  if (!ds.tasks[toZone]) ds.tasks[toZone] = [];
+  const existingIds = new Set(ds.tasks[toZone].map(t => t.id));
+  incomplete.forEach(t => {
+    if (!existingIds.has(t.id)) ds.tasks[toZone].push({...t, carried: true});
+    ds.tasks[fromZone] = ds.tasks[fromZone].filter(t2 => t2.id !== t.id);
+  });
+  await saveDay(dk, ds);
+  renderTasks(fromZone, ds);
+  renderTasks(toZone, ds);
+  showToast(`${incomplete.length} task${incomplete.length > 1 ? 's' : ''} moved to ${toZone === 'wind' ? 'Wind-Down' : toZone === 'night' ? 'Night Shift' : 'Learning'}`);
 }
 
 // ── INLINE EDITING ────────────────────────────────
