@@ -17,7 +17,7 @@ WORKDIR /workspace
 COPY settings.gradle.kts build.gradle.kts gradle.properties ./
 COPY app ./app
 
-RUN gradle --no-daemon --stacktrace :app:assembleDebug \
+RUN gradle --no-daemon --console=plain :app:assembleDebug \
     && mkdir -p /dist \
     && cp app/build/outputs/apk/debug/app-debug.apk /dist/Ankyra-debug.apk \
     && cd /dist \
@@ -35,4 +35,3 @@ EXPOSE 10000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD wget -qO- "http://127.0.0.1:${PORT}/health" || exit 1
-
