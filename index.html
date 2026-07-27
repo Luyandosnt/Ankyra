@@ -1,2736 +1,809 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>ANKYRA v1</title>
-<link rel="manifest" href="./manifest.json">
-<meta name="theme-color" content="#0f1112">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="ANKYRA">
-<link rel="apple-touch-icon" href="./icon-192.png">
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-<style>
-  :root {
-    --bg: #0f1112;
-    --surface: #181c1f;
-    --surface2: #22272b;
-    --border: #2c3236;
-    --text: #ffffff;
-    --muted: #5a6470;
-    --cyan: #00d4ff;
-    --cyan-dim: rgba(0,212,255,0.12);
-    --cyan-glow: rgba(0,212,255,0.08);
-    --accent: #00d4ff;
-    --accent2: #c0394b;
-    --accent3: #00d4ff;
-    --silver: #00d4ff;
-    --silver-bright: #00d4ff;
-    --success: #27ae60;
-    --partial: #00d4ff;
-    --missed: #c0394b;
-    --geco: #00d4ff;
-    --qs: #00d4ff;
-    --health: #27ae60;
-    --learning: #00d4ff;
-    --wildcard: #00d4ff;
-    --review: #00d4ff;
-  }
-
-
-  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'DM Sans', sans-serif;
-    min-height: 100vh;
-    overflow-x: hidden;
-  }
-
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
-    opacity: 0.4;
-    pointer-events: none;
-    z-index: 0;
-  }
-
-  .app { position: relative; z-index: 1; max-width: 430px; margin: 0 auto; padding: 0 0 100px; }
-
-  /* ── AUTH SCREEN ── */
-  #auth-screen {
-    position: fixed; inset: 0; z-index: 200;
-    background: var(--bg);
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    padding: 40px 28px; text-align: center;
-  }
-  #auth-screen .logo-big {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 4rem; letter-spacing: 0.1em;
-    color: var(--accent); line-height: 1; margin-bottom: 6px;
-  }
-  #auth-screen .tagline-big {
-    font-size: 0.72rem; letter-spacing: 0.2em;
-    text-transform: uppercase; color: var(--muted); margin-bottom: 40px;
-  }
-  .auth-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    padding: 28px 24px;
-    width: 100%; max-width: 320px;
-  }
-  .auth-title { font-size: 1rem; font-weight: 600; margin-bottom: 6px; }
-  .auth-sub { font-size: 0.78rem; color: var(--muted); margin-bottom: 24px; line-height: 1.5; }
-  .google-btn {
-    width: 100%;
-    background: #fff;
-    color: #1a1a2e;
-    border: none;
-    border-radius: 12px;
-    padding: 14px 20px;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 0.88rem;
-    font-weight: 600;
-    cursor: pointer;
-    display: flex; align-items: center; justify-content: center; gap: 10px;
-    transition: opacity 0.2s, transform 0.15s;
-    margin-bottom: 12px;
-  }
-  .google-btn:active { transform: scale(0.97); opacity: 0.9; }
-  .google-btn svg { width: 18px; height: 18px; flex-shrink: 0; }
-  .config-note {
-    font-size: 0.68rem; color: var(--muted);
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 10px 14px;
-    line-height: 1.5; margin-top: 16px; text-align: left;
-  }
-  .config-note strong { color: var(--accent); }
-
-  /* ── CONFIG NEEDED SCREEN ── */
-  #config-screen {
-    position: fixed; inset: 0; z-index: 200;
-    background: var(--bg);
-    display: none; flex-direction: column;
-    align-items: center; justify-content: center;
-    padding: 40px 24px;
-  }
-  .config-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    padding: 28px 24px;
-    width: 100%; max-width: 380px;
-  }
-  .config-card h2 {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 1.4rem; letter-spacing: 0.06em;
-    color: var(--accent); margin-bottom: 8px;
-  }
-  .config-card p { font-size: 0.8rem; color: var(--muted); line-height: 1.6; margin-bottom: 16px; }
-  .config-card ol { padding-left: 18px; }
-  .config-card li { font-size: 0.78rem; color: var(--muted); line-height: 1.8; }
-  .config-card li strong { color: var(--text); }
-  .config-card a { color: var(--accent); text-decoration: none; }
-  .step-badge {
-    display: inline-block;
-    background: var(--accent);
-    color: #000;
-    border-radius: 50%;
-    width: 18px; height: 18px;
-    font-size: 0.65rem; font-weight: 700;
-    text-align: center; line-height: 18px;
-    margin-right: 6px;
-  }
-
-  /* ── HEADER ── */
-  .header {
-    padding: 28px 20px 20px;
-    display: flex; align-items: flex-end; justify-content: space-between;
-    border-bottom: 1px solid var(--border);
-  }
-  .logo { font-family: 'Bebas Neue', sans-serif; font-size: 2.2rem; letter-spacing: 0.08em; color: var(--accent); line-height: 1; }
-  .tagline { font-size: 0.7rem; color: var(--muted); letter-spacing: 0.15em; text-transform: uppercase; margin-top: 2px; }
-  .header-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
-  .date-badge {
-    background: var(--surface2); border: 1px solid var(--border);
-    border-radius: 8px; padding: 6px 12px;
-    font-family: 'DM Mono', monospace; font-size: 0.72rem;
-    color: var(--muted); text-align: right;
-  }
-  .date-badge span { display: block; color: var(--text); font-size: 0.85rem; font-weight: 500; }
-  .user-row {
-    display: flex; align-items: center; gap: 6px;
-    font-size: 0.7rem; color: var(--muted);
-  }
-  .user-avatar {
-    width: 22px; height: 22px; border-radius: 50%;
-    background: var(--surface2); border: 1px solid var(--border);
-    overflow: hidden; display: flex; align-items: center; justify-content: center;
-    font-size: 0.65rem; color: var(--accent);
-  }
-  .user-avatar img { width: 100%; height: 100%; object-fit: cover; }
-  .signout-btn {
-    background: none; border: none; color: var(--muted);
-    font-size: 0.65rem; cursor: pointer; text-decoration: underline;
-  }
-
-  /* ── SYNC INDICATOR ── */
-  .sync-bar {
-    padding: 6px 20px;
-    font-size: 0.65rem;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    display: flex; align-items: center; gap: 6px;
-    border-bottom: 1px solid var(--border);
-    min-height: 30px;
-  }
-  .sync-dot {
-    width: 6px; height: 6px; border-radius: 50%;
-    background: var(--muted); flex-shrink: 0;
-    transition: background 0.3s;
-  }
-  .sync-dot.syncing { background: var(--partial); animation: pulse 1s infinite; }
-  .sync-dot.synced { background: var(--success); }
-  .sync-dot.error { background: var(--missed); }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
-  .sync-label { color: var(--muted); }
-
-  /* ── TABS ── */
-  .tab-nav {
-    display: flex; padding: 16px 20px 0; gap: 6px;
-    border-bottom: 1px solid var(--border);
-  }
-  .tab-btn {
-    flex: 1; background: none; border: none;
-    color: var(--muted); font-family: 'DM Sans', sans-serif;
-    font-size: 0.72rem; font-weight: 500;
-    letter-spacing: 0.1em; text-transform: uppercase;
-    padding: 8px 4px 12px; cursor: pointer;
-    border-bottom: 2px solid transparent; transition: all 0.2s;
-  }
-  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
-
-  /* ── VIEWS ── */
-  .view { display: none; padding: 20px; }
-  .view.active { display: block; }
-
-  /* ── TODAY ── */
-  .today-anchor {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 16px; padding: 20px; margin-bottom: 20px;
-    position: relative; overflow: hidden;
-  }
-  .today-anchor::before {
-    content: ''; position: absolute; top: 0; left: 0; right: 0;
-    height: 3px; background: var(--day-color, var(--accent));
-  }
-  .anchor-label { font-size: 0.65rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
-  .anchor-day { font-family: 'Bebas Neue', sans-serif; font-size: 2rem; letter-spacing: 0.05em; color: var(--day-color, var(--accent)); line-height: 1; }
-  .anchor-title { font-size: 1rem; font-weight: 600; margin: 4px 0 8px; color: var(--text); }
-  .anchor-desc { font-size: 0.8rem; color: var(--muted); line-height: 1.5; margin-bottom: 16px; }
-  .anchor-status-row { display: flex; gap: 8px; }
-  .status-btn {
-    flex: 1; border: 1px solid var(--border); background: var(--surface2);
-    border-radius: 10px; padding: 10px 6px;
-    font-family: 'DM Sans', sans-serif; font-size: 0.75rem; font-weight: 500;
-    color: var(--muted); cursor: pointer; text-align: center;
-    transition: all 0.2s; display: flex; flex-direction: column; align-items: center; gap: 4px;
-  }
-  .status-btn .icon { font-size: 1.2rem; }
-  .status-btn.selected-done { background: rgba(39,174,96,0.15); border-color: var(--success); color: var(--success); }
-  .status-btn.selected-partial { background: rgba(0,212,255,0.12); border-color: var(--partial); color: var(--partial); }
-  .status-btn.selected-missed { background: rgba(192,57,75,0.15); border-color: var(--missed); color: var(--missed); }
-
-  .zone-block {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 14px; padding: 16px; margin-bottom: 12px;
-  }
-  .zone-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-  .zone-icon { font-size: 1.1rem; }
-  .zone-name { font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
-  .zone-time { margin-left: auto; font-family: 'DM Mono', monospace; font-size: 0.68rem; color: var(--muted); background: var(--surface2); padding: 3px 8px; border-radius: 6px; }
-  .task-input-row { display: flex; gap: 8px; align-items: center; }
-  .task-input {
-    flex: 1; background: var(--surface2); border: 1px solid var(--border);
-    border-radius: 10px; padding: 10px 12px;
-    font-family: 'DM Sans', sans-serif; font-size: 0.82rem; color: var(--text);
-    outline: none; transition: border-color 0.2s;
-  }
-  .task-input::placeholder { color: var(--muted); }
-  .task-input:focus { border-color: var(--accent); }
-  .add-btn {
-    background: var(--accent); border: none; border-radius: 10px;
-    width: 38px; height: 38px; font-size: 1.2rem; cursor: pointer;
-    color: #000; font-weight: bold; display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0; transition: transform 0.15s;
-  }
-  .add-btn:active { transform: scale(0.9); }
-  .task-list { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
-  .task-item {
-    display: flex; align-items: center; gap: 10px;
-    padding: 8px 10px; background: var(--surface2); border-radius: 8px; font-size: 0.82rem;
-  }
-  .task-check {
-    width: 18px; height: 18px; border: 2px solid var(--border); border-radius: 5px;
-    cursor: pointer; display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0; transition: all 0.2s; font-size: 0.7rem; color: transparent;
-  }
-  .task-item.done .task-check { background: var(--success); border-color: var(--success); color: #000; }
-  .task-item.done .task-text { text-decoration: line-through; color: var(--muted); }
-  .task-text { flex: 1; }
-  .task-del { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 0.9rem; padding: 2px; }
-
-  .capture-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-  .capture-count { background: var(--surface2); color: var(--silver-bright); border:1px solid var(--border); border-radius: 20px; padding: 2px 8px; font-size: 0.65rem; font-weight: 600; }
-  .captured-item {
-    display: flex; align-items: center; gap: 8px;
-    padding: 8px 10px;
-    background: var(--surface2); border: 1px solid var(--border);
-    border-radius: 8px; font-size: 0.82rem; margin-bottom: 6px;
-  }
-  .move-btn { background: none; border: 1px solid var(--border); border-radius: 6px; padding: 3px 7px; font-size: 0.62rem; color: var(--muted); cursor: pointer; }
-
-  /* ── WEEK ── */
-  .week-grid { display: flex; flex-direction: column; gap: 8px; }
-  .week-row {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 14px; padding: 14px 16px;
-    display: flex; align-items: center; gap: 14px;
-    position: relative; overflow: hidden;
-  }
-  .week-row::before {
-    content: ''; position: absolute; left: 0; top: 0; bottom: 0;
-    width: 3px; background: var(--day-color, var(--muted)); border-radius: 0 2px 2px 0;
-  }
-  .week-row.today-row { border-color: var(--accent); }
-  .week-day-name { font-family: 'Bebas Neue', sans-serif; font-size: 1.1rem; letter-spacing: 0.06em; color: var(--day-color, var(--muted)); width: 30px; flex-shrink: 0; }
-  .week-domain { flex: 1; }
-  .week-domain-name { font-size: 0.85rem; font-weight: 600; color: var(--text); }
-  .week-domain-sub { font-size: 0.7rem; color: var(--muted); margin-top: 1px; }
-  .week-status-btns { display: flex; gap: 6px; }
-  .mini-status {
-    width: 32px; height: 32px; border-radius: 8px;
-    border: 1px solid var(--border); background: var(--surface2);
-    font-size: 0.9rem; cursor: pointer;
-    display: flex; align-items: center; justify-content: center; transition: all 0.15s;
-  }
-  .mini-status.sel-done { background: rgba(39,174,96,0.15); border-color: var(--success); }
-  .mini-status.sel-partial { background: rgba(0,212,255,0.12); border-color: var(--partial); }
-  .mini-status.sel-missed { background: rgba(192,57,75,0.15); border-color: var(--missed); }
-
-  /* ── REVIEW ── */
-  .streak-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
-  .streak-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px; text-align: center; }
-  .streak-num { font-family: 'Bebas Neue', sans-serif; font-size: 2.4rem; line-height: 1; color: var(--accent); }
-  .streak-label { font-size: 0.68rem; color: var(--muted); margin-top: 2px; }
-  .domain-bars { display: flex; flex-direction: column; gap: 10px; }
-  .domain-bar-row { display: flex; flex-direction: column; gap: 4px; }
-  .domain-bar-header { display: flex; justify-content: space-between; align-items: center; }
-  .domain-bar-name { font-size: 0.78rem; font-weight: 500; }
-  .domain-bar-pct { font-family: 'DM Mono', monospace; font-size: 0.72rem; color: var(--muted); }
-  .domain-bar-track { height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
-  .domain-bar-fill { height: 100%; border-radius: 3px; transition: width 0.6s cubic-bezier(0.16,1,0.3,1); }
-  .review-q { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px; margin-bottom: 10px; }
-  .review-q-text { font-size: 0.78rem; font-weight: 600; margin-bottom: 8px; color: var(--text); }
-  .review-textarea {
-    width: 100%; background: var(--surface2); border: 1px solid var(--border);
-    border-radius: 10px; padding: 10px 12px;
-    font-family: 'DM Sans', sans-serif; font-size: 0.82rem; color: var(--text);
-    resize: none; outline: none; min-height: 70px; transition: border-color 0.2s;
-  }
-  .review-textarea:focus { border-color: var(--accent); }
-  .week-history { display: flex; gap: 6px; margin-bottom: 20px; flex-wrap: wrap; }
-  .hist-dot {
-    width: 36px; height: 36px; border-radius: 8px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 0.65rem; font-weight: 600; font-family: 'DM Mono', monospace;
-    background: var(--surface2); color: var(--muted); border: 1px solid var(--border);
-  }
-  .hist-dot.done { background: rgba(39,174,96,0.15); border-color: var(--success); color: var(--success); }
-  .hist-dot.partial { background: rgba(0,212,255,0.12); border-color: var(--partial); color: var(--partial); }
-  .hist-dot.missed { background: rgba(192,57,75,0.15); border-color: var(--missed); color: var(--missed); }
-  .save-btn {
-    width: 100%; background: var(--accent); color: #000; border: none;
-    border-radius: 12px; padding: 14px;
-    font-family: 'Bebas Neue', sans-serif; font-size: 1rem; letter-spacing: 0.12em;
-    cursor: pointer; transition: opacity 0.2s, transform 0.15s;
-  }
-  .save-btn:active { transform: scale(0.98); opacity: 0.9; }
-
-  /* ── BOTTOM NAV ── */
-  .bottom-nav {
-    position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
-    width: 100%; max-width: 430px;
-    background: var(--surface); border-top: 1px solid var(--border);
-    display: flex; padding: 8px 0 20px; z-index: 100;
-  }
-  .nav-btn {
-    flex: 1; background: none; border: none;
-    display: flex; flex-direction: column; align-items: center; gap: 4px;
-    padding: 8px 0; cursor: pointer; color: var(--muted);
-    font-family: 'DM Sans', sans-serif; font-size: 0.6rem;
-    letter-spacing: 0.08em; text-transform: uppercase; transition: color 0.2s;
-  }
-  .nav-btn .nav-icon { font-size: 1.3rem; }
-  .nav-btn.active { color: var(--accent); }
-
-  .section-title {
-    font-family: 'Bebas Neue', sans-serif; font-size: 1.1rem; letter-spacing: 0.08em;
-    color: var(--muted); margin-bottom: 12px;
-    display: flex; align-items: center; gap: 8px;
-  }
-  .section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
-
-  .toast {
-    position: fixed; bottom: 100px; left: 50%;
-    transform: translateX(-50%) translateY(20px);
-    background: var(--accent); color: #000;
-    padding: 10px 20px; border-radius: 30px;
-    font-size: 0.8rem; font-weight: 600;
-    opacity: 0; transition: all 0.3s; z-index: 999; white-space: nowrap;
-  }
-  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-  .toast.error-toast { background: var(--missed); color: #fff; }
-
-  .loading-overlay {
-    position: fixed; inset: 0; z-index: 300;
-    background: var(--bg);
-    display: flex; align-items: center; justify-content: center;
-    flex-direction: column; gap: 16px;
-    transition: opacity 0.5s ease;
-  }
-  .loading-overlay.fade-out { opacity: 0; pointer-events: none; }
-  .loading-logo { font-family: 'Bebas Neue', sans-serif; font-size: 3rem; color: var(--accent); letter-spacing: 0.1em; }
-  .loading-dots { display: flex; gap: 6px; }
-  .loading-dots span {
-    width: 8px; height: 8px; border-radius: 50%; background: var(--accent);
-    animation: bounce 1.2s infinite ease-in-out;
-  }
-  .loading-dots span:nth-child(2) { animation-delay: 0.2s; }
-  .loading-dots span:nth-child(3) { animation-delay: 0.4s; }
-  @keyframes bounce { 0%,80%,100%{transform:scale(0.6);opacity:0.4} 40%{transform:scale(1);opacity:1} }
-
-  .welcome-msg {
-    display: none; flex-direction: column; align-items: center; gap: 6px;
-    animation: fadeInUp 0.5s ease forwards;
-  }
-  .welcome-msg.show { display: flex; }
-  .welcome-greeting { font-size: 0.8rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); }
-  .welcome-name { font-family: 'Bebas Neue', sans-serif; font-size: 2.2rem; letter-spacing: 0.08em; color: var(--text); }
-  @keyframes fadeInUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
-
-  /* ── LANDING SCREEN ── */
-  #landing-screen {
-    position: fixed; inset: 0; z-index: 250;
-    background: var(--bg);
-    display: none; flex-direction: column;
-    align-items: center; justify-content: center;
-    padding: 40px 28px; text-align: center;
-    opacity: 0; transition: opacity 0.4s ease;
-  }
-  #landing-screen.visible { opacity: 1; }
-  #landing-screen .logo-big {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 4rem; letter-spacing: 0.1em;
-    color: var(--accent); line-height: 1; margin-bottom: 6px;
-  }
-  #landing-screen .tagline-big {
-    font-size: 0.72rem; letter-spacing: 0.2em;
-    text-transform: uppercase; color: var(--muted); margin-bottom: 48px;
-  }
-  .signin-btn {
-    background: var(--accent); color: #000;
-    border: none; border-radius: 14px;
-    padding: 16px 48px;
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 1.1rem; letter-spacing: 0.12em;
-    cursor: pointer; transition: opacity 0.2s, transform 0.15s;
-  }
-  .signin-btn:active { transform: scale(0.97); opacity: 0.85; }
-
-/* ── RESTING BLOCK ── */
-  .rest-block {
-    grid-column: 1 / -1;
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 16px; padding: 36px 24px;
-    text-align: center; margin-top: 4px; transition: border-color 0.4s;
-  }
-  .rest-block.zone-active {
-    border-color: rgba(0,212,255,0.45);
-    background: linear-gradient(160deg, rgba(0,212,255,0.04) 0%, var(--surface) 60%);
-    animation: zoneGlow 3s ease-in-out infinite;
-  }
-  .rest-symbols { font-size: 2rem; letter-spacing: 0.25em; margin-bottom: 18px; display: block; }
-  .rest-message { font-size: 1.05rem; font-weight: 500; color: var(--text); line-height: 1.7; margin-bottom: 8px; }
-  .rest-time-label { font-size: 0.63rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
-
-  /* ── ACTIVE ZONE ── */
-  .zone-now-badge {
-    font-size:0.58rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase;
-    background:rgba(0,212,255,0.15); color:var(--cyan);
-    border:1px solid rgba(0,212,255,0.4);
-    border-radius:4px; padding:2px 8px; margin-left:6px; flex-shrink:0;
-  }
-  .zone-block.zone-active, .today-anchor.zone-active {
-    border-color: rgba(0,212,255,0.45);
-    background: linear-gradient(160deg, rgba(0,212,255,0.05) 0%, var(--surface) 60%);
-    animation: zoneGlow 3s ease-in-out infinite;
-    position: relative;
-  }
-  @keyframes zoneGlow {
-    0%,100% { box-shadow: 0 0 0 1px rgba(0,212,255,0.15), 0 0 20px rgba(0,212,255,0.10), 0 4px 32px rgba(0,212,255,0.05); }
-    50%      { box-shadow: 0 0 0 1px rgba(0,212,255,0.40), 0 0 36px rgba(0,212,255,0.20), 0 6px 56px rgba(0,212,255,0.10); }
-  }
-
-  /* ── TOGGLE SWITCH ── */
-  .toggle-switch { position:relative; display:inline-block; width:44px; height:24px; flex-shrink:0; }
-  .toggle-switch input { opacity:0; width:0; height:0; }
-  .toggle-slider { position:absolute; cursor:pointer; inset:0; background:var(--surface2); border:1px solid var(--border); border-radius:24px; transition:background 0.2s; }
-  .toggle-slider::before { content:''; position:absolute; height:18px; width:18px; left:2px; bottom:2px; background:var(--muted); border-radius:50%; transition:transform 0.2s, background 0.2s; }
-  .toggle-switch input:checked + .toggle-slider { background:rgba(0,212,255,0.12); border-color:var(--cyan); }
-  .toggle-switch input:checked + .toggle-slider::before { transform:translateX(20px); background:var(--accent); }
-
-  /* ── ZONE TIME SETTING ROW ── */
-  .zt-row { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--border); flex-wrap:wrap; }
-  .zt-row:last-child { border-bottom:none; }
-  .zt-icon { font-size:1.1rem; width:24px; flex-shrink:0; }
-  .zt-name { font-size:0.85rem; font-weight:600; flex:1; min-width:80px; }
-  .zt-range { font-size:0.68rem; color:var(--muted); }
-  .zt-input { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:6px 10px; color:var(--text); font-family:'DM Mono',monospace; font-size:0.82rem; width:100px; outline:none; transition:border-color 0.2s; }
-  .zt-input:focus { border-color:var(--accent); }
-
-  /* ── INLINE EDIT ── */
-  .edit-btn { background:none; border:none; color:var(--muted); cursor:pointer; font-size:0.72rem; padding:2px 5px; transition:color 0.15s; flex-shrink:0; }
-  .edit-btn:hover { color:var(--accent); }
-  .task-edit-input {
-    flex:1; background:var(--surface); border:1px solid var(--accent);
-    border-radius:6px; padding:4px 8px;
-    font-family:'DM Sans',sans-serif; font-size:0.82rem; color:var(--text);
-    outline:none; min-width:0;
-  }
-  .book-edit-row { display:flex; gap:8px; align-items:center; margin-top:8px; flex-wrap:wrap; }
-  .book-edit-row input { flex:1; min-width:80px; background:var(--surface2); border:1px solid var(--accent); border-radius:6px; padding:6px 10px; font-family:'DM Sans',sans-serif; font-size:0.82rem; color:var(--text); outline:none; }
-  .book-save-btn { background:var(--accent); border:none; border-radius:6px; padding:6px 12px; font-size:0.78rem; font-weight:600; color:#000; cursor:pointer; }
-
-  /* ── CARRY OVER BLOCK ── */
-  .carryover-block { border-color: rgba(192,57,75,0.35); }
-  .carryover-item {
-    display: flex; align-items: center; gap: 8px;
-    padding: 8px 10px;
-    background: var(--surface2); border: 1px solid var(--border);
-    border-radius: 8px; font-size: 0.82rem; margin-bottom: 6px;
-  }
-  .carryover-item.done-co { opacity: 0.45; }
-  .carryover-item.done-co .co-text { text-decoration: line-through; color: var(--muted); }
-  .co-check {
-    width: 18px; height: 18px; border: 2px solid rgba(255,107,53,0.4); border-radius: 5px;
-    cursor: pointer; display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0; font-size: 0.7rem; color: transparent; transition: all 0.2s;
-  }
-  .carryover-item.done-co .co-check { background: var(--accent2); border-color: var(--accent2); color: #fff; }
-  .co-text { flex: 1; }
-
-  /* ── CURRENT READ ── */
-  .current-read-block {
-    margin-top: 14px; padding-top: 14px;
-    border-top: 1px solid var(--border);
-  }
-  .cr-label { font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; display:flex; align-items:center; gap:6px; }
-  .cr-label::after { content:''; flex:1; height:1px; background:var(--border); }
-  .cr-set-form { display:flex; flex-direction:column; gap:8px; }
-  .cr-set-form input { width:100%; background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:10px 12px; font-family:'DM Sans',sans-serif; font-size:0.82rem; color:var(--text); outline:none; transition:border-color 0.2s; }
-  .cr-set-form input:focus { border-color:var(--silver); }
-  .cr-set-form .cr-pages-row { display:flex; gap:8px; }
-  .cr-set-form .cr-pages-row input { flex:1; }
-  .cr-start-btn { background:var(--accent); border:none; border-radius:10px; padding:10px; color:#0f1112; font-family:'DM Sans',sans-serif; font-weight:600; font-size:0.82rem; cursor:pointer; transition:opacity 0.2s; }
-  .cr-start-btn:active { opacity:0.85; }
-  .cr-active { display:flex; flex-direction:column; gap:10px; }
-  .cr-book-title { font-size:0.95rem; font-weight:600; color:var(--text); }
-  .cr-progress-row { display:flex; align-items:center; gap:10px; }
-  .cr-progress-track { flex:1; height:6px; background:var(--surface2); border-radius:3px; overflow:hidden; }
-  .cr-progress-fill { height:100%; background:var(--silver); border-radius:3px; transition:width 0.4s cubic-bezier(0.16,1,0.3,1); }
-  .cr-pct { font-family:'DM Mono',monospace; font-size:0.7rem; color:var(--muted); white-space:nowrap; }
-  .cr-page-row { display:flex; gap:8px; align-items:center; }
-  .cr-page-input { width:90px; background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:8px 10px; font-family:'DM Mono',monospace; font-size:0.88rem; color:var(--text); outline:none; text-align:center; transition:border-color 0.2s; }
-  .cr-page-input:focus { border-color:var(--silver); }
-  .cr-page-label { font-size:0.78rem; color:var(--muted); }
-  .cr-update-btn { background:var(--accent); border:none; border-radius:8px; padding:8px 14px; color:#0f1112; font-size:0.78rem; font-weight:600; cursor:pointer; transition:opacity 0.2s; }
-  .cr-change-btn { background:none; border:1px solid var(--border); border-radius:8px; padding:6px 10px; color:var(--muted); font-size:0.72rem; cursor:pointer; margin-top:2px; }
-
-  /* ── REVIEW WEEK NAV ── */
-  .review-week-nav {
-    display:flex; align-items:center; justify-content:space-between;
-    background:var(--surface); border:1px solid var(--border);
-    border-radius:12px; padding:10px 14px; margin-bottom:16px;
-  }
-  .review-week-nav button {
-    background:none; border:1px solid var(--border); border-radius:8px;
-    padding:6px 12px; color:var(--muted); cursor:pointer; font-size:0.8rem;
-    transition:all 0.15s;
-  }
-  .review-week-nav button:hover:not(:disabled) { border-color:var(--silver-bright); color:var(--silver-bright); }
-  .review-week-nav button:disabled { opacity:0.3; cursor:default; }
-  .review-week-label { font-size:0.82rem; font-weight:600; color:var(--text); text-align:center; }
-  .review-week-sub { font-size:0.65rem; color:var(--muted); text-align:center; }
-  .stats-loading { font-size:0.75rem; color:var(--muted); text-align:center; padding:12px; }
-
-  /* ── DAY DETAIL MODAL ── */
-  .day-modal {
-    position:fixed; inset:0; z-index:400;
-    background:rgba(0,0,0,0.75); backdrop-filter:blur(6px);
-    display:flex; align-items:flex-end; justify-content:center;
-    padding:0;
-  }
-  .day-modal-card {
-    background:var(--surface); border:1px solid var(--border);
-    border-radius:20px 20px 0 0; padding:24px 20px 40px;
-    width:100%; max-width:600px; max-height:85vh; overflow-y:auto;
-    animation: slideUp 0.3s cubic-bezier(0.16,1,0.3,1);
-  }
-  @keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
-  .day-modal-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; }
-  .day-modal-title { font-family:'Bebas Neue',sans-serif; font-size:1.4rem; letter-spacing:0.06em; }
-  .day-modal-close { background:none; border:1px solid var(--border); border-radius:8px; padding:6px 12px; color:var(--muted); cursor:pointer; font-size:0.78rem; }
-  .day-modal-section { margin-bottom:16px; }
-  .day-modal-section-title { font-size:0.65rem; letter-spacing:0.15em; text-transform:uppercase; color:var(--muted); margin-bottom:8px; display:flex; align-items:center; gap:6px; }
-  .day-modal-section-title::after { content:''; flex:1; height:1px; background:var(--border); }
-  .day-modal-task { display:flex; align-items:center; gap:8px; padding:7px 10px; background:var(--surface2); border-radius:8px; font-size:0.82rem; margin-bottom:5px; }
-  .day-modal-task.done-task { opacity:0.5; }
-  .day-modal-task.done-task span { text-decoration:line-through; }
-  .day-modal-check { font-size:0.75rem; color:var(--success); width:16px; flex-shrink:0; }
-  .day-modal-empty { font-size:0.75rem; color:var(--muted); font-style:italic; padding:4px 10px; }
-  .hist-dot { cursor:pointer; transition:transform 0.15s; }
-  .hist-dot:hover { transform:scale(1.1); }
-
-  /* ── COMPLETION MODAL ── */
-  .completion-modal {
-    position:fixed; inset:0; z-index:400;
-    background:rgba(0,0,0,0.7); backdrop-filter:blur(6px);
-    display:flex; align-items:center; justify-content:center; padding:24px;
-  }
-  .completion-card {
-    background:var(--surface); border:1px solid var(--border);
-    border-radius:20px; padding:32px 24px; text-align:center;
-    max-width:320px; width:100%;
-    animation: popIn 0.4s cubic-bezier(0.16,1,0.3,1);
-  }
-  @keyframes popIn { from{transform:scale(0.8);opacity:0} to{transform:scale(1);opacity:1} }
-  .completion-emoji { font-size:3rem; display:block; margin-bottom:12px; }
-  .completion-title { font-family:'Bebas Neue',sans-serif; font-size:1.8rem; letter-spacing:0.06em; color:var(--accent); margin-bottom:6px; }
-  .completion-book { font-size:1rem; font-weight:600; color:var(--text); margin-bottom:8px; }
-  .completion-sub { font-size:0.78rem; color:var(--muted); line-height:1.5; margin-bottom:24px; }
-  .completion-btn { background:var(--accent); border:none; border-radius:12px; padding:13px 32px; color:#000; font-family:'Bebas Neue',sans-serif; font-size:1rem; letter-spacing:0.1em; cursor:pointer; }
-
-  /* ── LIBRARY VIEW ── */
-  .library-tabs { display:flex; gap:6px; margin-bottom:20px; flex-wrap:wrap; }
-  .lib-tab { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:7px 14px; font-size:0.72rem; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; color:var(--muted); cursor:pointer; transition:all 0.2s; }
-  .lib-tab.active { background:rgba(0,212,255,0.10); border-color:var(--cyan); color:var(--cyan); }
-  .book-card {
-    background:var(--surface); border:1px solid var(--border); border-radius:14px;
-    padding:16px; margin-bottom:10px; display:flex; flex-direction:column; gap:8px;
-  }
-  .book-card-header { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
-  .book-title-text { font-size:0.9rem; font-weight:600; color:var(--text); }
-  .book-status-badge { font-size:0.6rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:3px 8px; border-radius:20px; white-space:nowrap; }
-  .badge-reading { background:rgba(0,212,255,0.10); color:var(--silver-bright); }
-  .badge-want { background:rgba(0,212,255,0.07); color:var(--silver); }
-  .badge-completed { background:rgba(39,174,96,0.15); color:var(--success); }
-  .book-progress-row { display:flex; align-items:center; gap:8px; }
-  .book-del-btn { background:none; border:none; color:var(--muted); cursor:pointer; font-size:0.85rem; padding:2px; }
-  .book-date { font-size:0.68rem; color:var(--muted); }
-  .add-book-form { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px; margin-bottom:16px; }
-  .add-book-form h4 { font-size:0.75rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); margin-bottom:12px; }
-  .add-book-form input, .add-book-form select { width:100%; background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:9px 12px; font-family:'DM Sans',sans-serif; font-size:0.82rem; color:var(--text); outline:none; margin-bottom:8px; transition:border-color 0.2s; }
-  .add-book-form input:focus { border-color:var(--silver); }
-  .add-book-form select { color:var(--text); cursor:pointer; }
-  .add-book-form select option { background:var(--surface2); }
-  .add-book-row { display:flex; gap:8px; }
-  .add-book-row input { margin-bottom:0; }
-  .lib-add-btn { background:var(--accent); border:none; border-radius:8px; padding:9px 16px; color:#0f1112; font-family:'DM Sans',sans-serif; font-weight:600; font-size:0.82rem; cursor:pointer; white-space:nowrap; }
-  .lib-section-empty { font-size:0.78rem; color:var(--muted); text-align:center; padding:20px; }
-
-  /* ── BIN VIEW ── */
-  .bin-empty { text-align:center; padding: 40px 20px; color: var(--muted); font-size:0.82rem; }
-  .bin-empty .bin-icon { font-size: 2.5rem; display:block; margin-bottom:10px; }
-  .bin-meta { font-size:0.68rem; color:var(--muted); margin-bottom:16px; letter-spacing:0.05em; }
-  .bin-item {
-    display:flex; align-items:center; gap:10px;
-    padding: 10px 12px; background: var(--surface);
-    border: 1px solid var(--border); border-radius: 10px; margin-bottom:8px;
-  }
-  .bin-item-info { flex:1; }
-  .bin-item-text { font-size:0.82rem; color: var(--text); }
-  .bin-item-meta { font-size:0.65rem; color: var(--muted); margin-top:2px; }
-  .bin-restore { background: none; border: 1px solid var(--border); border-radius:6px; padding:4px 9px; font-size:0.68rem; color:var(--muted); cursor:pointer; transition:all 0.15s; }
-  .bin-restore:hover { border-color:var(--accent); color:var(--accent); }
-  .bin-perm-del { background:none; border:none; color:var(--muted); cursor:pointer; font-size:0.9rem; padding:2px 4px; }
-  .bin-clear-btn {
-    width:100%; background:none; border:1px solid rgba(255,107,53,0.3);
-    border-radius:10px; padding:10px; color:var(--missed); font-size:0.78rem;
-    cursor:pointer; margin-top:8px; transition: background 0.2s;
-  }
-  .bin-clear-btn:hover { background: rgba(192,57,75,0.08); }
-
-  /* ── MOBILE: hide tab nav, show bottom nav ── */
-  .tab-nav { display: none; }
-  .sidebar { display: none; }
-  .zones-grid { display: flex; flex-direction: column; gap: 0; }
-  .review-questions-grid { display: flex; flex-direction: column; }
-
-  /* ── DESKTOP ── */
-  @media (min-width: 768px) {
-    body { overflow-x: hidden; }
-
-    /* Hide mobile-only elements */
-    .bottom-nav { display: none !important; }
-    .header-logo-block { display: none; }
-    .sync-bar { display: none; }
-
-    /* App: sidebar + content */
-    .app {
-      display: flex;
-      flex-direction: row;
-      max-width: 100%;
-      padding: 0;
-      min-height: 100vh;
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#050505">
+  <meta name="color-scheme" content="dark">
+  <title>Ankyra Timer</title>
+  <link rel="manifest" href="./manifest.json">
+  <link rel="apple-touch-icon" href="./icon-192.png">
+  <style>
+    :root {
+      --bg: #050505;
+      --surface: #171719;
+      --surface-hover: #232326;
+      --track: #343438;
+      --text: #f7f7f8;
+      --muted: #98989f;
+      --accent: #7b78ff;
+      --accent-soft: #9d9aff;
+      --danger: #ee342d;
+      --ring-size: min(78vw, 440px);
     }
 
-    /* Sidebar */
-    .sidebar {
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html,
+    body {
+      min-height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    body {
+      min-height: 100svh;
+      overscroll-behavior: none;
+    }
+
+    button,
+    input {
+      font: inherit;
+    }
+
+    button {
+      color: inherit;
+    }
+
+    .app {
+      width: min(100%, 560px);
+      min-height: 100svh;
+      margin: 0 auto;
+      padding:
+        max(18px, env(safe-area-inset-top))
+        24px
+        max(24px, env(safe-area-inset-bottom));
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 18px;
+    }
+
+    .topbar {
+      min-height: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .brand {
       display: flex;
       flex-direction: column;
-      width: 230px;
-      min-height: 100vh;
+      gap: 2px;
+    }
+
+    .brand strong {
+      font-size: 1rem;
+      letter-spacing: .18em;
+    }
+
+    .brand span {
+      color: var(--muted);
+      font-size: .72rem;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .icon-button {
+      width: 48px;
+      height: 48px;
+      border: 0;
+      border-radius: 50%;
+      background: transparent;
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      transition: background .2s ease, transform .15s ease;
+    }
+
+    .icon-button:hover {
       background: var(--surface);
-      border-right: 1px solid var(--border);
-      padding: 32px 20px 28px;
-      position: fixed;
-      top: 0; left: 0;
-      z-index: 50;
-    }
-    .sidebar-logo {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 2rem; letter-spacing: 0.1em;
-      color: var(--accent); line-height: 1; margin-bottom: 4px;
-    }
-    .sidebar-v1 { font-size: 1rem; color: var(--muted); }
-    .sidebar-tagline {
-      font-size: 0.6rem; letter-spacing: 0.15em;
-      text-transform: uppercase; color: var(--muted); margin-bottom: 32px;
-    }
-    .sidebar-nav { display: flex; flex-direction: column; gap: 4px; }
-    .sidebar-btn {
-      display: flex; align-items: center; gap: 10px;
-      background: none; border: none;
-      color: var(--muted); font-family: 'DM Sans', sans-serif;
-      font-size: 0.85rem; font-weight: 500;
-      padding: 10px 14px; border-radius: 10px; cursor: pointer;
-      transition: all 0.2s; text-align: left; width: 100%;
-    }
-    .sidebar-btn:hover { background: var(--surface2); color: var(--text); }
-    .sidebar-btn.active { background: rgba(0,212,255,0.10); color: var(--cyan); }
-    .sb-icon { font-size: 1.1rem; }
-    .sidebar-spacer { flex: 1; }
-    .sidebar-sync {
-      display: flex; align-items: center; gap: 8px;
-      padding: 10px 0; border-top: 1px solid var(--border);
-      margin-bottom: 12px;
-    }
-    .sidebar-user {
-      display: flex; align-items: center; gap: 10px;
-    }
-    .sidebar-user-info {
-      display: flex; flex-direction: column; gap: 2px;
     }
 
-    /* Main content offset */
-    .main-content {
-      margin-left: 230px;
-      flex: 1;
-      max-width: calc(100% - 230px);
+    .icon-button:active {
+      transform: scale(.92);
     }
 
-    /* Header — desktop: date only, no logo */
-    .header {
-      padding: 24px 32px 20px;
-      border-bottom: 1px solid var(--border);
+    .icon-button svg {
+      width: 30px;
+      height: 30px;
     }
-    .header-right { flex-direction: row; align-items: center; gap: 16px; }
-    .user-row { display: none; }
 
-    /* Views */
-    .view { padding: 28px 32px; }
+    .timer-stage {
+      display: grid;
+      place-items: center;
+      align-content: center;
+      min-height: 440px;
+    }
 
-    /* Today: 2-col zones grid */
-    .zones-grid {
+    .timer-ring {
+      width: var(--ring-size);
+      height: var(--ring-size);
+      position: relative;
+      display: grid;
+      place-items: center;
+    }
+
+    .timer-ring svg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+      transform: rotate(-90deg);
+    }
+
+    .ring-track,
+    .ring-progress {
+      fill: none;
+      stroke-width: 4.6;
+    }
+
+    .ring-track {
+      stroke: var(--track);
+    }
+
+    .ring-progress {
+      stroke: var(--accent);
+      stroke-linecap: round;
+      transition: stroke-dashoffset .35s linear, stroke .25s ease;
+    }
+
+    .timer-ring.done .ring-progress {
+      stroke: var(--accent-soft);
+    }
+
+    .timer-content {
+      width: 74%;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      z-index: 1;
+    }
+
+    .total-duration {
+      color: #c7c7cb;
+      font-size: clamp(.9rem, 3.6vw, 1.2rem);
+      min-height: 1.5em;
+    }
+
+    .time {
+      font-variant-numeric: tabular-nums;
+      font-weight: 400;
+      font-size: clamp(3.05rem, 14vw, 5.5rem);
+      line-height: 1;
+      letter-spacing: -.055em;
+      white-space: nowrap;
+    }
+
+    .finish-time {
+      color: #d3d3d7;
+      font-size: clamp(.88rem, 3.5vw, 1.1rem);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 1.5em;
+    }
+
+    .finish-time svg {
+      position: static;
+      width: 18px;
+      height: 18px;
+      transform: none;
+    }
+
+    .actions {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 16px;
     }
 
-    /* Week: wider rows */
-    .week-grid { gap: 10px; }
-    .week-row { padding: 18px 20px; }
-
-    /* Review: 2-col questions */
-    .review-questions-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      margin-bottom: 16px;
+    .action-button {
+      min-height: 62px;
+      padding: 16px 20px;
+      border: 0;
+      border-radius: 999px;
+      font-weight: 650;
+      font-size: 1.05rem;
+      cursor: pointer;
+      transition: filter .2s ease, transform .15s ease;
     }
-    .review-questions-grid .review-q { margin-bottom: 0; }
-    .review-textarea { min-height: 100px; }
 
-    /* Wider streak/domain */
-    .streak-row { grid-template-columns: repeat(2, 180px); }
-    .save-btn { max-width: 300px; }
+    .action-button:active {
+      transform: scale(.97);
+    }
 
-    /* Toast offset */
-    .toast { bottom: 32px; }
-  }
-</style>
+    .action-button:hover {
+      filter: brightness(1.08);
+    }
+
+    .secondary {
+      background: #2e2e31;
+    }
+
+    .primary {
+      background: var(--danger);
+    }
+
+    .sheet-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      background: rgba(0, 0, 0, .66);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .25s ease;
+    }
+
+    .sheet-backdrop.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .sheet {
+      position: absolute;
+      left: 50%;
+      bottom: 0;
+      width: min(100%, 560px);
+      transform: translate(-50%, 105%);
+      background: #161618;
+      border-radius: 28px 28px 0 0;
+      padding: 12px 24px max(28px, env(safe-area-inset-bottom));
+      transition: transform .3s cubic-bezier(.2, .8, .2, 1);
+    }
+
+    .sheet-backdrop.open .sheet {
+      transform: translate(-50%, 0);
+    }
+
+    .handle {
+      width: 42px;
+      height: 5px;
+      margin: 0 auto 22px;
+      border-radius: 10px;
+      background: #4a4a4f;
+    }
+
+    .sheet h2 {
+      font-size: 1.3rem;
+      margin-bottom: 6px;
+    }
+
+    .sheet-copy {
+      color: var(--muted);
+      font-size: .88rem;
+      margin-bottom: 24px;
+    }
+
+    .duration-inputs {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr auto 1fr;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+
+    .duration-field {
+      min-width: 0;
+      text-align: center;
+    }
+
+    .duration-field input {
+      width: 100%;
+      height: 68px;
+      border: 1px solid #3a3a3f;
+      border-radius: 16px;
+      outline: 0;
+      background: #222225;
+      color: var(--text);
+      text-align: center;
+      font-size: 1.65rem;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .duration-field input:focus {
+      border-color: var(--accent);
+    }
+
+    .duration-field label {
+      display: block;
+      color: var(--muted);
+      font-size: .68rem;
+      margin-top: 7px;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+    }
+
+    .colon {
+      color: var(--muted);
+      font-size: 1.5rem;
+      margin-bottom: 24px;
+    }
+
+    input[type="number"] {
+      appearance: textfield;
+      -moz-appearance: textfield;
+    }
+
+    input::-webkit-inner-spin-button,
+    input::-webkit-outer-spin-button {
+      appearance: none;
+      margin: 0;
+    }
+
+    .presets {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding: 2px 0 20px;
+      scrollbar-width: none;
+    }
+
+    .presets::-webkit-scrollbar {
+      display: none;
+    }
+
+    .preset {
+      flex: 0 0 auto;
+      border: 1px solid #39393d;
+      border-radius: 999px;
+      background: #242427;
+      padding: 10px 14px;
+      color: #d6d6da;
+      cursor: pointer;
+    }
+
+    .preset.selected {
+      border-color: var(--accent);
+      background: rgba(123, 120, 255, .16);
+      color: #c4c2ff;
+    }
+
+    .sheet-actions {
+      display: grid;
+      grid-template-columns: 1fr 1.4fr;
+      gap: 12px;
+    }
+
+    .sheet-button {
+      min-height: 54px;
+      border: 0;
+      border-radius: 999px;
+      cursor: pointer;
+      font-weight: 650;
+    }
+
+    .sheet-button.cancel {
+      background: #2c2c30;
+    }
+
+    .sheet-button.set {
+      background: var(--accent);
+      color: #09090b;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    @media (max-height: 680px) {
+      :root {
+        --ring-size: min(65vh, 72vw, 390px);
+      }
+
+      .timer-stage {
+        min-height: 330px;
+      }
+
+      .app {
+        gap: 8px;
+      }
+    }
+
+    @media (min-width: 700px) {
+      .app {
+        padding-inline: 36px;
+      }
+
+      .action-button {
+        min-height: 68px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        scroll-behavior: auto !important;
+        transition-duration: .01ms !important;
+      }
+    }
+  </style>
 </head>
 <body>
+  <main class="app">
+    <header class="topbar">
+      <div class="brand" aria-label="Ankyra timer">
+        <strong>ANKYRA</strong>
+        <span>Timer</span>
+      </div>
+      <button class="icon-button" id="open-settings" type="button" aria-label="Set timer duration">
+        <svg viewBox="0 0 32 32" aria-hidden="true">
+          <path d="M16 5v22M5 16h22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </header>
 
-<!-- Loading / Welcome overlay -->
-<div class="loading-overlay" id="loading-overlay">
-  <div id="loading-logo-block">
-    <div class="loading-logo">ANKYRA v1</div>
-    <div class="loading-dots"><span></span><span></span><span></span></div>
+    <section class="timer-stage" aria-label="Countdown timer">
+      <div class="timer-ring" id="timer-ring">
+        <svg viewBox="0 0 100 100" aria-hidden="true">
+          <circle class="ring-track" cx="50" cy="50" r="46"></circle>
+          <circle class="ring-progress" id="ring-progress" cx="50" cy="50" r="46"></circle>
+        </svg>
+        <div class="timer-content">
+          <div class="total-duration" id="total-duration">2 h</div>
+          <time class="time" id="time-display" aria-live="polite">2:00:00</time>
+          <div class="finish-time" id="finish-time">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 8.5h18C21 15 18 15 18 8ZM9.5 19a2.7 2.7 0 0 0 5 0" fill="currentColor"/>
+            </svg>
+            <span id="finish-time-text">Ends at —</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="actions">
+      <button class="action-button secondary" id="reset-button" type="button">Delete</button>
+      <button class="action-button primary" id="toggle-button" type="button">Start</button>
+    </div>
+  </main>
+
+  <div class="sheet-backdrop" id="sheet-backdrop" aria-hidden="true">
+    <section class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+      <div class="handle" aria-hidden="true"></div>
+      <h2 id="sheet-title">Set timer</h2>
+      <p class="sheet-copy">Choose how long you want to focus.</p>
+
+      <div class="duration-inputs">
+        <div class="duration-field">
+          <label for="hours">Hours</label>
+          <input id="hours" type="number" inputmode="numeric" min="0" max="99" value="2">
+        </div>
+        <span class="colon" aria-hidden="true">:</span>
+        <div class="duration-field">
+          <label for="minutes">Minutes</label>
+          <input id="minutes" type="number" inputmode="numeric" min="0" max="59" value="0">
+        </div>
+        <span class="colon" aria-hidden="true">:</span>
+        <div class="duration-field">
+          <label for="seconds">Seconds</label>
+          <input id="seconds" type="number" inputmode="numeric" min="0" max="59" value="0">
+        </div>
+      </div>
+
+      <div class="presets" aria-label="Timer presets">
+        <button class="preset" type="button" data-minutes="5">5 min</button>
+        <button class="preset" type="button" data-minutes="15">15 min</button>
+        <button class="preset" type="button" data-minutes="25">25 min</button>
+        <button class="preset" type="button" data-minutes="45">45 min</button>
+        <button class="preset" type="button" data-minutes="60">1 hour</button>
+        <button class="preset selected" type="button" data-minutes="120">2 hours</button>
+      </div>
+
+      <div class="sheet-actions">
+        <button class="sheet-button cancel" id="cancel-settings" type="button">Cancel</button>
+        <button class="sheet-button set" id="set-timer" type="button">Set timer</button>
+      </div>
+    </section>
   </div>
-  <div class="welcome-msg" id="welcome-msg">
-    <div class="welcome-greeting">Welcome back</div>
-    <div class="welcome-name" id="welcome-name">—</div>
-  </div>
-</div>
 
-<!-- Landing screen (not signed in) -->
-<div id="landing-screen">
-  <div class="logo-big">ANKYRA v1</div>
-  <div class="tagline-big">Commitment Initializer And Monitor</div>
-  <button class="signin-btn" onclick="showAuthScreen()">Sign In</button>
-</div>
+  <div class="sr-only" id="status-announcement" aria-live="assertive"></div>
 
-<!-- Config needed screen -->
-<div id="config-screen" style="display:none;position:fixed;inset:0;z-index:200;background:var(--bg);overflow-y:auto;padding:40px 20px;">
-  <div class="config-card" style="margin:0 auto;max-width:400px;">
-    <h2>⚙️ Setup Required</h2>
-    <p>This app needs a Firebase project to sync your data across devices. It takes about 5 minutes.</p>
-    <ol style="list-style:none;padding:0;">
-      <li style="margin-bottom:12px;"><span class="step-badge">1</span>Go to <a href="https://console.firebase.google.com" target="_blank">console.firebase.google.com</a> and create a new project (name it <strong>anchor-tracker</strong>)</li>
-      <li style="margin-bottom:12px;"><span class="step-badge">2</span>In the project, click <strong>Firestore Database</strong> → Create database → Start in <strong>test mode</strong></li>
-      <li style="margin-bottom:12px;"><span class="step-badge">3</span>Go to <strong>Authentication</strong> → Sign-in method → Enable <strong>Google</strong></li>
-      <li style="margin-bottom:12px;"><span class="step-badge">4</span>Go to <strong>Project Settings</strong> (gear icon) → Your apps → Add web app → Copy your <strong>firebaseConfig</strong></li>
-      <li style="margin-bottom:12px;"><span class="step-badge">5</span>Open <strong>index.html</strong> in a code editor, find the <code style="color:var(--accent);font-size:0.75rem;">FIREBASE_CONFIG_HERE</code> section and replace it with your config</li>
-      <li style="margin-bottom:12px;"><span class="step-badge">6</span>In Firebase Auth → Settings → Authorised domains → add your <strong>GitHub Pages domain</strong> (e.g. <code style="color:var(--accent);font-size:0.75rem;">yourusername.github.io</code>)</li>
-      <li><span class="step-badge">7</span>Push to GitHub Pages and open the live URL</li>
-    </ol>
-    <div style="margin-top:16px;padding:12px;background:var(--surface2);border-radius:10px;border:1px solid var(--border);">
-      <p style="font-size:0.72rem;color:var(--muted);margin:0;">💡 Full step-by-step instructions are also in the <strong style="color:var(--text);">README.md</strong> file in your repo.</p>
-    </div>
-  </div>
-</div>
+  <script>
+    (() => {
+      const STORAGE_KEY = "ankyra-timer-v2";
+      const circumference = 2 * Math.PI * 46;
 
-<!-- Auth screen -->
-<div id="auth-screen" style="display:none;">
-  <div class="logo-big">ANKYRA v1</div>
-  <div class="tagline-big">Commitment Initializer And Monitor</div>
-  <div class="auth-card">
-    <div class="auth-title">Sign in to sync</div>
-    <div class="auth-sub">Your data syncs across all your devices automatically.</div>
-    <button class="google-btn" onclick="signInWithGoogle()">
-      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-      </svg>
-      Continue with Google
-    </button>
-    <div class="config-note">
-      <strong>First time?</strong> You'll need to add your Firebase config to this file. See <strong>README.md</strong> for the full setup guide — it takes about 5 minutes.
-    </div>
-  </div>
-</div>
+      const elements = {
+        display: document.getElementById("time-display"),
+        total: document.getElementById("total-duration"),
+        finish: document.getElementById("finish-time-text"),
+        progress: document.getElementById("ring-progress"),
+        ring: document.getElementById("timer-ring"),
+        toggle: document.getElementById("toggle-button"),
+        reset: document.getElementById("reset-button"),
+        open: document.getElementById("open-settings"),
+        backdrop: document.getElementById("sheet-backdrop"),
+        cancel: document.getElementById("cancel-settings"),
+        set: document.getElementById("set-timer"),
+        hours: document.getElementById("hours"),
+        minutes: document.getElementById("minutes"),
+        seconds: document.getElementById("seconds"),
+        announcement: document.getElementById("status-announcement")
+      };
 
-<!-- Main App -->
-<div class="app" id="main-app" style="display:none;">
+      let state = {
+        totalSeconds: 7200,
+        remainingSeconds: 7200,
+        running: false,
+        endAt: null,
+        completed: false
+      };
+      let intervalId = null;
 
-  <!-- Desktop Sidebar -->
-  <aside class="sidebar" id="sidebar">
-    <div class="sidebar-logo">ANKYRA <span class="sidebar-v1">v1</span></div>
-    <div class="sidebar-tagline">Commitment Initializer And Monitor</div>
-    <nav class="sidebar-nav">
-      <button class="sidebar-btn active" id="sb-today" onclick="showView('today',null,null,'sb-today')">
-        <span class="sb-icon">⚓</span> Today
-      </button>
-      <button class="sidebar-btn" id="sb-week" onclick="showView('week',null,null,'sb-week')">
-        <span class="sb-icon">📅</span> Week
-      </button>
-      <button class="sidebar-btn" id="sb-review" onclick="showView('review',null,null,'sb-review')">
-        <span class="sb-icon">📊</span> Review
-      </button>
-      <button class="sidebar-btn" id="sb-schedule" onclick="showView('schedule',null,null,'sb-schedule')">
-        <span class="sb-icon">📋</span> Schedule
-      </button>
-      <button class="sidebar-btn" id="sb-library" onclick="showView('library',null,null,'sb-library')">
-        <span class="sb-icon">📚</span> Library
-      </button>
-      <button class="sidebar-btn" id="sb-bin" onclick="showView('bin',null,null,'sb-bin')">
-        <span class="sb-icon">🗑️</span> Bin
-      </button>
-      <button class="sidebar-btn" id="sb-settings" onclick="showView('settings',null,null,'sb-settings')">
-        <span class="sb-icon">⚙️</span> Settings
-      </button>
-    </nav>
-    <div class="sidebar-spacer"></div>
-    <div class="sidebar-sync">
-      <div class="sync-dot" id="sync-dot-sb"></div>
-      <span id="sync-label-sb" style="font-size:0.68rem;color:var(--muted);">Connecting…</span>
-    </div>
-    <div class="sidebar-user">
-      <div class="user-avatar" id="user-avatar-sb">?</div>
-      <div class="sidebar-user-info">
-        <span id="user-name-sb" style="font-size:0.8rem;color:var(--text);">…</span>
-        <button class="signout-btn" onclick="signOut()">sign out</button>
-      </div>
-    </div>
-  </aside>
+      elements.progress.style.strokeDasharray = String(circumference);
 
-  <!-- Main Content -->
-  <div class="main-content">
-    <div class="header">
-      <div class="header-logo-block">
-        <div class="logo">ANKYRA v1</div>
-        <div class="tagline">Commitment Initializer And Monitor</div>
-      </div>
-      <div class="header-right">
-        <div class="date-badge">
-          <div id="date-label">Loading…</div>
-          <span id="week-label"></span>
-        </div>
-        <div class="user-row">
-          <div class="user-avatar" id="user-avatar">?</div>
-          <span id="user-name">…</span>
-          <button class="signout-btn" onclick="signOut()">sign out</button>
-        </div>
-      </div>
-    </div>
+      function loadState() {
+        try {
+          const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+          if (!saved || !Number.isFinite(saved.totalSeconds)) return;
+          state = { ...state, ...saved };
+          if (state.running && state.endAt) {
+            state.remainingSeconds = Math.max(0, Math.ceil((state.endAt - Date.now()) / 1000));
+            if (state.remainingSeconds === 0) finishTimer(false);
+          }
+        } catch (_) {
+          localStorage.removeItem(STORAGE_KEY);
+        }
+      }
 
-    <div class="sync-bar">
-      <div class="sync-dot" id="sync-dot"></div>
-      <span class="sync-label" id="sync-label">Connecting…</span>
-    </div>
+      function saveState() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      }
 
-    <!-- TODAY -->
-    <div id="view-today" class="view active">
-      <div class="today-anchor" id="anchor-card">
-        <div class="anchor-label">⚓ Today's Anchor Block · 90 mins</div>
-        <div class="anchor-day" id="anchor-day-name">MONDAY</div>
-        <div class="anchor-title" id="anchor-title">GECO — Production</div>
-        <div class="anchor-desc" id="anchor-desc">Loading…</div>
-        <div class="anchor-status-row">
-          <button class="status-btn" id="btn-done" onclick="setAnchorStatus('done')"><span class="icon">✅</span>Completed</button>
-          <button class="status-btn" id="btn-partial" onclick="setAnchorStatus('partial')"><span class="icon">⚡</span>Partial</button>
-          <button class="status-btn" id="btn-missed" onclick="setAnchorStatus('missed')"><span class="icon">❌</span>Missed</button>
-        </div>
-      </div>
+      function clamp(value, min, max) {
+        return Math.min(max, Math.max(min, Number(value) || 0));
+      }
 
-      <!-- Captured List -->
-      <div class="zone-block carryover-block" id="carryover-section" style="display:none;">
-        <div class="zone-header">
-          <span class="zone-icon">🔁</span>
-          <span class="zone-name">Captured</span>
-          <span class="zone-time" style="color:var(--accent2);">Undone from previous days</span>
-        </div>
-        <p style="font-size:0.72rem;color:var(--muted);margin-bottom:10px;">Unfinished tasks from Flex, Wind-Down &amp; Night Shift. Tick to clear, move or delete.</p>
-        <div id="carryover-list"></div>
-      </div>
+      function parts(seconds) {
+        const safe = Math.max(0, Math.round(seconds));
+        return {
+          hours: Math.floor(safe / 3600),
+          minutes: Math.floor((safe % 3600) / 60),
+          seconds: safe % 60
+        };
+      }
 
-      <div class="zones-grid">
-        <div class="zone-block" id="zone-block-flex">
-          <div class="zone-header">
-            <span class="zone-icon">☀️</span>
-            <span class="zone-name">Flex Zone</span>
-            <span class="zone-time" id="zone-time-flex">Mid-morning → Afternoon</span>
-            <span class="zone-now-badge" id="zone-now-flex" style="display:none;">NOW</span>
-          </div>
-          <div class="task-input-row">
-            <input class="task-input" id="flex-input" placeholder="Add task or reactive item…" onkeydown="handleEnter(event,'flex')">
-            <button class="add-btn" onclick="addTask('flex')">+</button>
-          </div>
-          <div class="task-list" id="flex-tasks"></div>
-        </div>
+      function formatTime(seconds) {
+        const value = parts(seconds);
+        if (value.hours > 0) {
+          return `${value.hours}:${String(value.minutes).padStart(2, "0")}:${String(value.seconds).padStart(2, "0")}`;
+        }
+        return `${value.minutes}:${String(value.seconds).padStart(2, "0")}`;
+      }
 
-        <div class="zone-block">
-          <div class="capture-header">
-            <div class="zone-header" style="margin:0">
-              <span class="zone-icon">📝</span>
-              <span class="zone-name">Capture List</span>
-            </div>
-            <span class="capture-count" id="capture-count">0 items</span>
-          </div>
-          <p style="font-size:0.72rem;color:var(--muted);margin-bottom:10px;">Distracted? Write it here, keep working.</p>
-          <div class="task-input-row">
-            <input class="task-input" id="capture-input" placeholder="Capture the distraction…" onkeydown="if(event.key==='Enter')addCapture()">
-            <button class="add-btn" onclick="addCapture()" style="background:var(--surface2);border:1px solid var(--border)">+</button>
-          </div>
-          <div id="capture-list" style="margin-top:10px;"></div>
-        </div>
+      function formatTotal(seconds) {
+        const value = parts(seconds);
+        const labels = [];
+        if (value.hours) labels.push(`${value.hours} h`);
+        if (value.minutes) labels.push(`${value.minutes} min`);
+        if (!labels.length && value.seconds) labels.push(`${value.seconds} sec`);
+        return labels.join(" ") || "Timer";
+      }
 
-        <div class="zone-block" id="zone-block-wind">
-          <div class="zone-header">
-            <span class="zone-icon">🌆</span>
-            <span class="zone-name">Wind-Down</span>
-            <span class="zone-time" id="zone-time-wind">Late Afternoon</span>
-            <span class="zone-now-badge" id="zone-now-wind" style="display:none;">NOW</span>
-          </div>
-          <p style="font-size:0.72rem;color:var(--muted);margin-bottom:10px;">Finishing up for the day…</p>
-          <div class="task-input-row">
-            <input class="task-input" id="wind-input" placeholder="Tomorrow's most important task…" onkeydown="handleEnter(event,'wind')">
-            <button class="add-btn" onclick="addTask('wind')" style="background:var(--surface2);border:1px solid var(--border)">+</button>
-          </div>
-          <div class="task-list" id="wind-tasks"></div>
-        </div>
+      function formatClock(timestamp) {
+        return new Intl.DateTimeFormat(undefined, {
+          hour: "2-digit",
+          minute: "2-digit"
+        }).format(new Date(timestamp));
+      }
 
-        <div class="zone-block" id="zone-block-night">
-          <div class="zone-header">
-            <span class="zone-icon">🌃</span>
-            <span class="zone-name">Night Shift</span>
-            <span class="zone-time" id="zone-time-night">Evening · Work Block</span>
-            <span class="zone-now-badge" id="zone-now-night" style="display:none;">NOW</span>
-          </div>
-          <div class="task-input-row">
-            <input class="task-input" id="night-input" placeholder="Add night shift task…" onkeydown="handleEnter(event,'night')">
-            <button class="add-btn" onclick="addTask('night')" style="background:var(--surface2);border:1px solid var(--border)">+</button>
-          </div>
-          <div class="task-list" id="night-tasks"></div>
-        </div>
+      function updateView() {
+        const ratio = state.totalSeconds > 0
+          ? Math.min(1, Math.max(0, state.remainingSeconds / state.totalSeconds))
+          : 0;
 
-        <div class="zone-block" style="grid-column:1/-1;" id="zone-block-learn">
-          <div class="zone-header">
-            <span class="zone-icon">🌙</span>
-            <span class="zone-name">Learning</span>
-            <span class="zone-time" id="zone-time-learn">Evening · 45–60 mins</span>
-            <span class="zone-now-badge" id="zone-now-learn" style="display:none;">NOW</span>
-          </div>
-          <div class="task-input-row">
-            <input class="task-input" id="learn-input" placeholder="What are you studying tonight?" onkeydown="handleEnter(event,'learn')">
-            <button class="add-btn" onclick="addTask('learn')" style="background:var(--surface2);border:1px solid var(--border)">+</button>
-          </div>
-          <div class="task-list" id="learn-tasks"></div>
+        elements.display.textContent = formatTime(state.remainingSeconds);
+        elements.display.setAttribute("datetime", `PT${Math.round(state.remainingSeconds)}S`);
+        elements.total.textContent = state.completed ? "Time complete" : formatTotal(state.totalSeconds);
+        elements.progress.style.strokeDashoffset = String(circumference * (1 - ratio));
+        elements.ring.classList.toggle("done", state.completed);
 
-          <!-- Current Read -->
-          <div class="current-read-block">
-            <div class="cr-label">📖 Current Read</div>
-            <div id="cr-set-form">
-              <div class="cr-set-form">
-                <input id="cr-title-input" placeholder="Book title…" />
-                <div class="cr-pages-row">
-                  <input id="cr-pages-input" type="number" min="1" placeholder="Total pages" />
-                </div>
-                <button class="cr-start-btn" onclick="startReading()">Start Reading</button>
-              </div>
-            </div>
-            <div id="cr-active-block" style="display:none;">
-              <div class="cr-active">
-                <div class="cr-book-title" id="cr-book-title">—</div>
-                <div class="cr-progress-row">
-                  <div class="cr-progress-track"><div class="cr-progress-fill" id="cr-progress-fill" style="width:0%"></div></div>
-                  <div class="cr-pct" id="cr-pct">0%</div>
-                </div>
-                <div class="cr-page-row">
-                  <input class="cr-page-input" id="cr-last-page" type="number" min="0" placeholder="Page" />
-                  <span class="cr-page-label">of <span id="cr-total-pages">0</span> pages</span>
-                  <button class="cr-update-btn" onclick="updateLastPage()">Update</button>
-                </div>
-                <button class="cr-change-btn" onclick="changeBook()">Change book</button>
-              </div>
-            </div>
-          </div>
-        </div>
+        if (state.running && state.endAt) {
+          elements.finish.textContent = `Ends at ${formatClock(state.endAt)}`;
+        } else if (state.completed) {
+          elements.finish.textContent = "Finished";
+        } else {
+          elements.finish.textContent = "Ready when you are";
+        }
 
-        <!-- Resting -->
-        <div class="rest-block" id="zone-block-rest">
-          <span class="zone-now-badge" id="zone-now-rest" style="display:none;margin-bottom:14px;">NOW</span>
-          <span class="rest-symbols">🌙 ✦ 💤 ✦ 🌙</span>
-          <div class="rest-message" id="rest-message-text">Good Night. Tomorrow you conquer again.</div>
-          <div class="rest-time-label" id="zone-time-rest">After Learning</div>
-        </div>
-      </div>
-    </div>
+        elements.toggle.textContent = state.running ? "Pause" : state.completed ? "Restart" : state.remainingSeconds < state.totalSeconds ? "Resume" : "Start";
+        document.title = state.running ? `${formatTime(state.remainingSeconds)} · Ankyra` : "Ankyra Timer";
+      }
 
-    <!-- SCHEDULE -->
-    <div id="view-schedule" class="view">
-      <div class="section-title">Schedule</div>
-      <p style="font-size:0.78rem;color:var(--muted);margin-bottom:16px;">Your identified backlog. Tasks persist here until you move or remove them.</p>
-      <div class="zone-block">
-        <div class="task-input-row">
-          <input class="task-input" id="schedule-input" placeholder="Add a scheduled task…" onkeydown="if(event.key==='Enter')addScheduleTask()">
-          <button class="add-btn" onclick="addScheduleTask()" style="background:var(--surface2);border:1px solid var(--border)">+</button>
-        </div>
-        <div class="task-list" id="schedule-tasks" style="margin-top:10px;"></div>
-      </div>
-    </div>
+      function startTicker() {
+        clearInterval(intervalId);
+        intervalId = window.setInterval(tick, 250);
+      }
 
-    <!-- LIBRARY -->
-    <div id="view-library" class="view">
-      <div class="add-book-form">
-        <h4>Add a book</h4>
-        <input id="lib-title-input" placeholder="Book title…" />
-        <div class="add-book-row">
-          <input id="lib-pages-input" type="number" min="1" placeholder="Total pages (optional)" />
-          <select id="lib-status-select">
-            <option value="want">Want to Read</option>
-            <option value="reading">Currently Reading</option>
-            <option value="completed">Completed</option>
-          </select>
-        </div>
-        <button class="lib-add-btn" style="width:100%;margin-top:4px;" onclick="addBookToLibrary()">Add to Library</button>
-      </div>
-      <div class="library-tabs">
-        <button class="lib-tab active" id="libtab-reading" onclick="switchLibTab('reading')">📖 Reading</button>
-        <button class="lib-tab" id="libtab-want" onclick="switchLibTab('want')">🔖 Want</button>
-        <button class="lib-tab" id="libtab-completed" onclick="switchLibTab('completed')">✅ Completed</button>
-      </div>
-      <div id="lib-books-list"></div>
-    </div>
+      function tick() {
+        if (!state.running || !state.endAt) return;
+        const next = Math.max(0, Math.ceil((state.endAt - Date.now()) / 1000));
+        if (next !== state.remainingSeconds) {
+          state.remainingSeconds = next;
+          updateView();
+          saveState();
+        }
+        if (next === 0) finishTimer(true);
+      }
 
-    <!-- SETTINGS -->
-    <div id="view-settings" class="view">
-      <div class="section-title">Zone Times</div>
-      <p style="font-size:0.78rem;color:var(--muted);margin-bottom:16px;">Set when each zone starts. The end time is automatically 10 minutes before the next zone begins.</p>
-      <div class="zone-block" style="margin-bottom:16px;">
-        <div id="zone-time-settings"></div>
-        <button class="save-btn" style="margin-top:16px;" onclick="saveZoneTimes()">Save Zone Times</button>
-      </div>
-      <div class="section-title" style="margin-top:8px;">Notifications</div>
-      <div class="zone-block" style="margin-bottom:16px;">
-        <p style="font-size:0.8rem;color:var(--text);font-weight:600;margin-bottom:4px;">Enable phone notifications</p>
-        <p style="font-size:0.73rem;color:var(--muted);margin-bottom:12px;line-height:1.5;">On Android: tap <strong style="color:var(--text);">Allow</strong> when prompted.<br>On iPhone: tap <strong style="color:var(--text);">Share → Add to Home Screen</strong> first, then open from there.</p>
-        <button class="save-btn" onclick="requestNotificationPermission().then(ok => showToast(ok ? '🔔 Notifications on!' : 'Permission denied — check browser settings', !ok))">Enable Notifications</button>
-      </div>
-      <div class="section-title" style="margin-top:8px;">General</div>
-      <div class="zone-block">
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);">
-          <div>
-            <div style="font-size:0.85rem;font-weight:600;">Auto-highlight active zone</div>
-            <div style="font-size:0.72rem;color:var(--muted);">Show NOW badge on the current time zone</div>
-          </div>
-          <label class="toggle-switch"><input type="checkbox" id="setting-highlight" checked onchange="saveGeneralSettings()"><span class="toggle-slider"></span></label>
-        </div>
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;">
-          <div>
-            <div style="font-size:0.85rem;font-weight:600;">Zone transition toast</div>
-            <div style="font-size:0.72rem;color:var(--muted);">Notify when a new zone becomes active</div>
-          </div>
-          <label class="toggle-switch"><input type="checkbox" id="setting-toast" checked onchange="saveGeneralSettings()"><span class="toggle-slider"></span></label>
-        </div>
-      </div>
-      <div class="section-title" style="margin-top:20px;">Good Night Message</div>
-      <div class="zone-block">
-        <p style="font-size:0.75rem;color:var(--muted);margin-bottom:12px;">Shown on the Resting block at the end of the day.</p>
-        <textarea class="review-textarea" id="setting-rest-message" placeholder="Good Night. Tomorrow you conquer again." style="min-height:60px;"></textarea>
-        <button class="save-btn" style="margin-top:10px;" onclick="saveRestMessage()">Save Message</button>
-      </div>
-    </div>
+      function startTimer() {
+        if (state.completed || state.remainingSeconds <= 0) {
+          state.remainingSeconds = state.totalSeconds;
+          state.completed = false;
+        }
+        state.running = true;
+        state.endAt = Date.now() + state.remainingSeconds * 1000;
+        saveState();
+        updateView();
+        startTicker();
+      }
 
-    <!-- BIN -->
-    <div id="view-bin" class="view">
-      <div class="section-title">Recycle Bin</div>
-      <div class="bin-meta" id="bin-meta">Items are permanently deleted after 24 hours</div>
-      <div id="bin-list"></div>
-    </div>
+      function pauseTimer() {
+        tick();
+        state.running = false;
+        state.endAt = null;
+        clearInterval(intervalId);
+        saveState();
+        updateView();
+        elements.announcement.textContent = `Timer paused with ${formatTime(state.remainingSeconds)} remaining.`;
+      }
 
-    <!-- WEEK -->
-    <div id="view-week" class="view">
-      <div class="section-title">This Week</div>
-      <div class="week-grid" id="week-grid"></div>
-      <div class="section-title" style="margin-top:20px;">History</div>
-      <div class="week-history" id="week-history"></div>
-    </div>
+      function finishTimer(playSound) {
+        state.running = false;
+        state.remainingSeconds = 0;
+        state.endAt = null;
+        state.completed = true;
+        clearInterval(intervalId);
+        saveState();
+        updateView();
+        elements.announcement.textContent = "Timer complete.";
+        if (playSound) signalCompletion();
+        if ("vibrate" in navigator) navigator.vibrate([160, 90, 160]);
+      }
 
-    <!-- REVIEW -->
-    <div id="view-review" class="view">
-      <div class="streak-row">
-        <div class="streak-card"><div class="streak-num" id="streak-num">—</div><div class="streak-label">Day Streak</div></div>
-        <div class="streak-card"><div class="streak-num" id="completion-rate">—</div><div class="streak-label">Completion Rate</div></div>
-      </div>
-      <div class="section-title">Anchor Status · Last 14 Days</div>
-      <div id="review-anchor-strip" style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:20px;"></div>
-      <div class="section-title">Domain Performance <span class="stats-loading" id="stats-loading-label" style="display:inline;font-size:0.65rem;color:var(--muted);margin-left:8px;"></span></div>
-      <div class="domain-bars" id="domain-bars"></div>
-      <div class="section-title" style="margin-top:20px;">Weekly Review</div>
-      <div class="review-week-nav">
-        <button id="review-prev-btn" onclick="navigateReviewWeek(-1)">← Prev</button>
-        <div>
-          <div class="review-week-label" id="review-week-label">—</div>
-          <div class="review-week-sub" id="review-week-sub"></div>
-        </div>
-        <button id="review-next-btn" onclick="navigateReviewWeek(1)" disabled>Next →</button>
-      </div>
-      <div class="review-questions-grid">
-        <div class="review-q"><div class="review-q-text">1. What moved forward this week?</div><textarea class="review-textarea" id="review-q1" placeholder="GECO: …  Construction: …  Health: …  Learning: …"></textarea></div>
-        <div class="review-q"><div class="review-q-text">2. What kept stalling?</div><textarea class="review-textarea" id="review-q2" placeholder="Usually one thing…"></textarea></div>
-        <div class="review-q"><div class="review-q-text">3. Most important outcome per domain next week?</div><textarea class="review-textarea" id="review-q3" placeholder="GECO: …  Construction: …  Health: …  Learning: …"></textarea></div>
-        <div class="review-q"><div class="review-q-text">4. Does the anchor rotation still feel right?</div><textarea class="review-textarea" id="review-q4" placeholder="Any domain needing more days?"></textarea></div>
-      </div>
-      <button class="save-btn" onclick="saveReview()">SAVE REVIEW</button>
-    </div>
-  </div><!-- /main-content -->
-</div>
+      function signalCompletion() {
+        try {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          const context = new AudioContext();
+          [0, .22, .44].forEach((delay, index) => {
+            const oscillator = context.createOscillator();
+            const gain = context.createGain();
+            oscillator.type = "sine";
+            oscillator.frequency.value = index === 2 ? 880 : 660;
+            gain.gain.setValueAtTime(.0001, context.currentTime + delay);
+            gain.gain.exponentialRampToValueAtTime(.22, context.currentTime + delay + .02);
+            gain.gain.exponentialRampToValueAtTime(.0001, context.currentTime + delay + .16);
+            oscillator.connect(gain).connect(context.destination);
+            oscillator.start(context.currentTime + delay);
+            oscillator.stop(context.currentTime + delay + .18);
+          });
+        } catch (_) {}
+      }
 
-<!-- Day Detail Modal -->
-<div class="day-modal" id="day-modal" style="display:none;" onclick="closeDayModal(event)">
-  <div class="day-modal-card">
-    <div class="day-modal-header">
-      <div class="day-modal-title" id="day-modal-title">—</div>
-      <button class="day-modal-close" onclick="document.getElementById('day-modal').style.display='none'">Close</button>
-    </div>
-    <div id="day-modal-body"></div>
-  </div>
-</div>
+      function deleteTimer() {
+        clearInterval(intervalId);
+        state = {
+          totalSeconds: 0,
+          remainingSeconds: 0,
+          running: false,
+          endAt: null,
+          completed: false
+        };
+        saveState();
+        updateView();
+        openSheet();
+      }
 
-<!-- Completion Modal -->
-<div class="completion-modal" id="completion-modal" style="display:none;">
-  <div class="completion-card">
-    <span class="completion-emoji">🎉</span>
-    <div class="completion-title">Book Finished!</div>
-    <div class="completion-book" id="completion-book-name"></div>
-    <div class="completion-sub">You finished this book. It's been added to your library under Completed.</div>
-    <button class="completion-btn" onclick="dismissCompletion()">Awesome! 🙌</button>
-  </div>
-</div>
+      function openSheet() {
+        const value = parts(state.totalSeconds || 7200);
+        elements.hours.value = value.hours;
+        elements.minutes.value = value.minutes;
+        elements.seconds.value = value.seconds;
+        updatePresetSelection();
+        elements.backdrop.classList.add("open");
+        elements.backdrop.setAttribute("aria-hidden", "false");
+        window.setTimeout(() => elements.hours.focus(), 300);
+      }
 
-<div class="bottom-nav" id="bottom-nav" style="display:none;">
-  <button class="nav-btn active" id="nav-today" onclick="showView('today',null,'nav-today')"><span class="nav-icon">⚓</span>Today</button>
-  <button class="nav-btn" id="nav-week" onclick="showView('week',null,'nav-week')"><span class="nav-icon">📅</span>Week</button>
-  <button class="nav-btn" id="nav-review" onclick="showView('review',null,'nav-review')"><span class="nav-icon">📊</span>Review</button>
-  <button class="nav-btn" id="nav-schedule" onclick="showView('schedule',null,'nav-schedule')"><span class="nav-icon">📋</span>Schedule</button>
-  <button class="nav-btn" id="nav-library" onclick="showView('library',null,'nav-library')"><span class="nav-icon">📚</span>Library</button>
-  <button class="nav-btn" id="nav-bin" onclick="showView('bin',null,'nav-bin')"><span class="nav-icon">🗑️</span>Bin</button>
-  <button class="nav-btn" id="nav-settings" onclick="showView('settings',null,'nav-settings')"><span class="nav-icon">⚙️</span>Settings</button>
-</div>
+      function closeSheet() {
+        elements.backdrop.classList.remove("open");
+        elements.backdrop.setAttribute("aria-hidden", "true");
+        elements.open.focus();
+      }
 
-<div class="toast" id="toast"></div>
+      function readDuration() {
+        const hours = clamp(elements.hours.value, 0, 99);
+        const minutes = clamp(elements.minutes.value, 0, 59);
+        const seconds = clamp(elements.seconds.value, 0, 59);
+        elements.hours.value = hours;
+        elements.minutes.value = minutes;
+        elements.seconds.value = seconds;
+        return hours * 3600 + minutes * 60 + seconds;
+      }
 
-<!-- ═══════════════════════════════════════════════
-     FIREBASE CONFIG
-     Replace the object below with YOUR firebaseConfig
-     from Firebase Console → Project Settings → Your apps
-     ═══════════════════════════════════════════════ -->
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut as fbSignOut }
-  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, doc, getDoc, setDoc, onSnapshot, collection, query, where, getDocs }
-  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+      function setTimer() {
+        const totalSeconds = readDuration();
+        if (totalSeconds <= 0) {
+          elements.minutes.value = 1;
+          elements.minutes.focus();
+          return;
+        }
+        clearInterval(intervalId);
+        state = {
+          totalSeconds,
+          remainingSeconds: totalSeconds,
+          running: false,
+          endAt: null,
+          completed: false
+        };
+        saveState();
+        updateView();
+        closeSheet();
+        elements.announcement.textContent = `Timer set for ${formatTotal(totalSeconds)}.`;
+      }
 
-// ─────────────────────────────────────────────────
-// 🔧 REPLACE THIS WITH YOUR FIREBASE CONFIG
-// ─────────────────────────────────────────────────
-const firebaseConfig = {
-  apiKey: "AIzaSyAQ5LfqK1BxYD9FxnpnnRI0CtHSPs4GKlA",
-  authDomain: "ankyra-5b83b.firebaseapp.com",
-  projectId: "ankyra-5b83b",
-  storageBucket: "ankyra-5b83b.firebasestorage.app",
-  messagingSenderId: "511229613498",
-  appId: "1:511229613498:web:78ee8af79025ad7d363983"
-};
-// ─────────────────────────────────────────────────
+      function updatePresetSelection() {
+        const currentMinutes = readDuration() / 60;
+        document.querySelectorAll(".preset").forEach(button => {
+          button.classList.toggle("selected", Number(button.dataset.minutes) === currentMinutes);
+        });
+      }
 
-const CONFIG_FILLED = !firebaseConfig.apiKey.includes("REPLACE");
-
-const DAYS = [
-  { name:'SUN', full:'SUNDAY',    domain:'Weekly Review',      sub:'Plan ahead. Review wins and stalls.',              color:'var(--cyan)',  icon:'○' },
-  { name:'MON', full:'MONDAY',    domain:'GECO — Production',  sub:'Wacky Ancestors / Jam Pass production work.',      color:'var(--cyan)',  icon:'○' },
-  { name:'TUE', full:'TUESDAY',   domain:'Construction / QS',  sub:'Tender prep, BOQ pricing, RFQ work.',              color:'var(--cyan)',  icon:'○' },
-  { name:'WED', full:'WEDNESDAY', domain:'GECO — Strategy',    sub:'Documentation, funding, pitch, partnerships.',     color:'var(--cyan)',  icon:'○' },
-  { name:'THU', full:'THURSDAY',  domain:'Construction / QS',  sub:'Compliance review, pricing checks, follow-ups.',   color:'var(--cyan)',  icon:'○' },
-  { name:'FRI', full:'FRIDAY',    domain:'Health & Fitness',   sub:'Movement, meal prep, body audit.',                 color:'var(--success)', icon:'○' },
-  { name:'SAT', full:'SATURDAY',  domain:'Wildcard',           sub:'Most urgent task across all domains.',             color:'var(--cyan)',  icon:'○' },
-];
-
-const DOMAIN_COLORS = {
-  'GECO — Production':'var(--cyan)', 'GECO — Strategy':'var(--cyan)',
-  'Construction / QS':'var(--cyan)', 'Health & Fitness':'var(--success)',
-  'Wildcard':'var(--cyan)',           'Weekly Review':'var(--cyan)',
-};
-
-let app, auth, db, currentUser, unsubscribe;
-let localCache = {};
-let syncTimeout = null;
-let reviewWeekOffset = 0;
-let swRegistration = null;
-
-// ── SERVICE WORKER + NOTIFICATIONS ────────────────
-async function initPWA() {
-  if ('serviceWorker' in navigator) {
-    try {
-      swRegistration = await navigator.serviceWorker.register('./sw.js', { scope: './' });
-    } catch(e) { console.warn('SW registration failed:', e); }
-  }
-}
-
-async function requestNotificationPermission() {
-  if (!('Notification' in window)) return false;
-  if (Notification.permission === 'granted') return true;
-  if (Notification.permission === 'denied') return false;
-  const perm = await Notification.requestPermission();
-  return perm === 'granted';
-}
-
-async function sendZoneNotification(title, body) {
-  const granted = await requestNotificationPermission();
-  if (!granted) return;
-  // Use SW if available (works in background on Android)
-  if (swRegistration) {
-    try {
-      await swRegistration.showNotification(title, {
-        body, tag: 'zone-change', renotify: true,
-        vibrate: [200, 100, 200], icon: './icon-192.png',
+      elements.toggle.addEventListener("click", () => {
+        if (state.totalSeconds <= 0) return openSheet();
+        state.running ? pauseTimer() : startTimer();
       });
-      return;
-    } catch(e) {}
-  }
-  // Fallback: foreground notification
-  new Notification(title, { body, tag: 'zone-change' });
-}
-let allDaysLoaded = false;
-
-function dateKey(offset=0) {
-  const d = new Date(); d.setDate(d.getDate()+offset);
-  return d.toISOString().split('T')[0];
-}
-
-function getWeekKeys() {
-  const today = new Date();
-  const dow = today.getDay();
-  const mondayOffset = dow===0 ? -6 : 1-dow;
-  return Array.from({length:7},(_,i)=>{
-    const d = new Date(today); d.setDate(d.getDate()+mondayOffset+i);
-    return { key:d.toISOString().split('T')[0], dayIdx:d.getDay() };
-  });
-}
-
-// ── FIREBASE INIT ──────────────────────────────────
-function initFirebase() {
-  if (!CONFIG_FILLED) {
-    document.getElementById('loading-overlay').style.display = 'none';
-    document.getElementById('config-screen').style.display = 'flex';
-    return;
-  }
-  try {
-    app = initializeApp(firebaseConfig);
-    auth = getAuth(app);
-    db = getFirestore(app);
-    onAuthStateChanged(auth, handleAuthChange);
-  } catch(e) {
-    document.getElementById('loading-overlay').style.display = 'none';
-    document.getElementById('config-screen').style.display = 'flex';
-  }
-}
-
-function fadeOutOverlay(cb) {
-  const overlay = document.getElementById('loading-overlay');
-  overlay.classList.add('fade-out');
-  setTimeout(() => { overlay.style.display = 'none'; overlay.classList.remove('fade-out'); if(cb) cb(); }, 500);
-}
-
-function handleAuthChange(user) {
-  if (user) {
-    currentUser = user;
-    const firstName = user.displayName?.split(' ')[0] || 'You';
-    const avatarHtml = user.photoURL ? `<img src="${user.photoURL}">` : (user.displayName||'?')[0].toUpperCase();
-    // Populate user info
-    document.getElementById('user-name').textContent = firstName;
-    const avatar = document.getElementById('user-avatar');
-    if (user.photoURL) avatar.innerHTML = avatarHtml; else avatar.textContent = avatarHtml;
-    document.getElementById('user-name-sb').textContent = firstName;
-    const avatarSb = document.getElementById('user-avatar-sb');
-    if (user.photoURL) avatarSb.innerHTML = `<img src="${user.photoURL}">`; else avatarSb.textContent = (user.displayName||'?')[0].toUpperCase();
-    // Show welcome message then open app
-    document.getElementById('loading-logo-block').style.display = 'none';
-    document.getElementById('welcome-name').textContent = firstName;
-    document.getElementById('welcome-msg').classList.add('show');
-    setTimeout(() => {
-      fadeOutOverlay(() => {
-        document.getElementById('auth-screen').style.display = 'none';
-        document.getElementById('landing-screen').style.display = 'none';
-        document.getElementById('main-app').style.display = 'block';
-        document.getElementById('bottom-nav').style.display = 'flex';
-        initPWA();
-        requestNotificationPermission();
-        initApp();
+      elements.reset.addEventListener("click", deleteTimer);
+      elements.open.addEventListener("click", openSheet);
+      elements.cancel.addEventListener("click", closeSheet);
+      elements.set.addEventListener("click", setTimer);
+      elements.backdrop.addEventListener("click", event => {
+        if (event.target === elements.backdrop) closeSheet();
       });
-    }, 1400);
-  } else {
-    currentUser = null;
-    // Fade out overlay, show landing screen
-    fadeOutOverlay(() => {
-      const landing = document.getElementById('landing-screen');
-      landing.style.display = 'flex';
-      requestAnimationFrame(() => landing.classList.add('visible'));
-    });
-    document.getElementById('main-app').style.display = 'none';
-    document.getElementById('bottom-nav').style.display = 'none';
-  }
-}
-
-window.showAuthScreen = function() {
-  document.getElementById('landing-screen').style.display = 'none';
-  document.getElementById('auth-screen').style.display = 'flex';
-};
-
-window.signInWithGoogle = async function() {
-  const provider = new GoogleAuthProvider();
-  try { await signInWithPopup(auth, provider); }
-  catch(e) { showToast('Sign in failed: '+e.message, true); }
-};
-
-window.signOut = async function() {
-  if (unsubscribe) unsubscribe();
-  await fbSignOut(auth);
-};
-
-// ── FIRESTORE ─────────────────────────────────────
-function userDoc(dateK) {
-  return doc(db, 'users', currentUser.uid, 'days', dateK);
-}
-
-function setSyncState(state) {
-  const msgs = { syncing:'Syncing…', synced:'Synced', error:'Sync error — check connection' };
-  ['sync-dot','sync-dot-sb'].forEach(id=>{ const el=document.getElementById(id); if(el) el.className='sync-dot '+state; });
-  ['sync-label','sync-label-sb'].forEach(id=>{ const el=document.getElementById(id); if(el) el.textContent=msgs[state]||''; });
-}
-
-async function loadDay(dateK) {
-  if (localCache[dateK]) return localCache[dateK];
-  try {
-    const snap = await getDoc(userDoc(dateK));
-    const data = snap.exists() ? snap.data() : defaultDay();
-    localCache[dateK] = data;
-    return data;
-  } catch(e) {
-    return localCache[dateK] || defaultDay();
-  }
-}
-
-async function saveDay(dateK, data) {
-  localCache[dateK] = data;
-  setSyncState('syncing');
-  clearTimeout(syncTimeout);
-  syncTimeout = setTimeout(async () => {
-    try {
-      await setDoc(userDoc(dateK), data);
-      setSyncState('synced');
-    } catch(e) {
-      setSyncState('error');
-      showToast('Sync failed — will retry', true);
-    }
-  }, 400);
-}
-
-function defaultDay() {
-  return { anchorStatus: null, tasks: { flex:[], wind:[], night:[], learn:[] }, captures: [], deletedIds: [] };
-}
-
-// ── BIN ───────────────────────────────────────────
-function binDocRef() { return doc(db, 'users', currentUser.uid, 'meta', 'bin'); }
-let binCache = null;
-
-async function loadBin() {
-  try {
-    const snap = await getDoc(binDocRef());
-    let items = snap.exists() ? (snap.data().items || []) : [];
-    const now = Date.now();
-    const fresh = items.filter(i => now - i.deletedAt < 24*60*60*1000);
-    if (fresh.length !== items.length) { items = fresh; await saveBin(items); }
-    binCache = items;
-    return items;
-  } catch(e) { return binCache || []; }
-}
-
-async function saveBin(items) {
-  binCache = items;
-  try { await setDoc(binDocRef(), { items }); } catch(e) {}
-}
-
-async function addToBin(task, zone, fromDate) {
-  const items = await loadBin();
-  items.push({ ...task, zone, fromDate, deletedAt: Date.now() });
-  await saveBin(items);
-}
-
-// Each day starts fresh — no flex/learn carry-over.
-// Only the dedicated Carry Over section (yesterday's undone wind-down) pre-fills.
-
-// ── CAPTURED LIST ─────────────────────────────────
-// Undone tasks from Flex, Wind-Down & Night Shift across previous days.
-// Ticking marks done on source day and removes from list.
-// Source day record stays intact for historical review.
-async function loadCarryOver() {
-  const section = document.getElementById('carryover-section');
-  const binItems = await loadBin();
-  const deletedIds = new Set(binItems.map(b => b.id));
-  const seenIds = new Set();
-  const undone = []; // { task, sourceKey, sourceZone }
-
-  for (let i = 1; i <= 30; i++) {
-    const d = new Date(); d.setDate(d.getDate() - i);
-    const key = d.toISOString().split('T')[0];
-    const data = await loadDay(key);
-    ['flex','wind','night'].forEach(zone => {
-      (data?.tasks?.[zone] || []).forEach(t => {
-        if (!t.done && !deletedIds.has(t.id) && !seenIds.has(t.id)) {
-          seenIds.add(t.id);
-          undone.push({ task: t, sourceKey: key, sourceZone: zone });
+      document.addEventListener("keydown", event => {
+        if (event.key === "Escape" && elements.backdrop.classList.contains("open")) closeSheet();
+        if (event.code === "Space" && !elements.backdrop.classList.contains("open")) {
+          event.preventDefault();
+          elements.toggle.click();
         }
       });
-    });
-  }
-
-  if (!undone.length) { section.style.display = 'none'; return; }
-  section.style.display = 'block';
-
-  const zoneLabel = { flex:'☀️ Flex', wind:'🌆 Wind', night:'🌃 Night' };
-
-  // Move buttons differ by source zone
-  function moveBtns(sourceKey, sourceZone, id) {
-    const all = { flex:'Flex', wind:'Wind', night:'Night' };
-    return Object.entries(all)
-      .filter(([z]) => z !== sourceZone)
-      .map(([z, label]) =>
-        `<button class="move-btn" onclick="moveCarryOverToZone('${sourceKey}','${sourceZone}',${id},'${z}')" style="margin-right:4px">→ ${label}</button>`)
-      .join('');
-  }
-
-  document.getElementById('carryover-list').innerHTML = undone.map(({ task: t, sourceKey, sourceZone }) => `
-    <div class="carryover-item" id="co-item-${t.id}">
-      <div class="co-check" onclick="toggleCarryOver('${sourceKey}','${sourceZone}',${t.id})"></div>
-      <div class="co-text">${escHtml(t.text)}<span style="font-size:0.63rem;color:var(--muted);margin-left:6px;">${zoneLabel[sourceZone]||''}</span></div>
-      ${moveBtns(sourceKey, sourceZone, t.id)}
-      <button class="task-del" onclick="deleteCarryOverItem('${sourceKey}','${sourceZone}',${t.id})" style="margin-left:4px">✕</button>
-    </div>`).join('');
-}
-
-window.deleteCarryOverItem = async function(sourceKey, sourceZone, id) {
-  const ds = await loadDay(sourceKey);
-  const task = (ds?.tasks?.[sourceZone] || []).find(t => t.id === id);
-  if (task) await addToBin(task, sourceZone, sourceKey);
-  if (ds?.tasks?.[sourceZone]) ds.tasks[sourceZone] = ds.tasks[sourceZone].filter(t => t.id !== id);
-  await saveDay(sourceKey, ds);
-  await loadCarryOver();
-};
-
-window.toggleCarryOver = async function(sourceKey, sourceZone, id) {
-  const ds = await loadDay(sourceKey);
-  const t = (ds?.tasks?.[sourceZone] || []).find(t => t.id === id);
-  if (t) { t.done = true; await saveDay(sourceKey, ds); await loadCarryOver(); }
-};
-
-window.moveCarryOverToZone = async function(sourceKey, sourceZone, id, toZone) {
-  const dk = dateKey();
-  const [srcData, todayData] = await Promise.all([loadDay(sourceKey), loadDay(dk)]);
-  const t = (srcData?.tasks?.[sourceZone] || []).find(t => t.id === id);
-  if (t) {
-    if (!todayData.tasks[toZone]) todayData.tasks[toZone] = [];
-    todayData.tasks[toZone].push({...t, done: false, carried: true});
-    srcData.tasks[sourceZone] = srcData.tasks[sourceZone].filter(t => t.id !== id);
-    await Promise.all([saveDay(sourceKey, srcData), saveDay(dk, todayData)]);
-    await loadCarryOver();
-    renderTasks(toZone, todayData);
-    const labels = {flex:'Flex Zone', wind:'Wind-Down', night:'Night Shift'};
-    showToast(`Moved to ${labels[toZone]} ✓`);
-  }
-};
-
-// ── SCHEDULE MIGRATION ────────────────────────────
-// Pulls tasks.schedule from any daily docs into the persistent schedule doc (runs once)
-async function migrateScheduleFromDays() {
-  // Load persistent schedule ONCE before scanning days
-  const snap = await getDoc(scheduleDocRef()).catch(() => null);
-  scheduleCache = (snap && snap.exists()) ? (snap.data().tasks || []) : [];
-  const existingIds = new Set(scheduleCache.map(t => t.id));
-
-  let migrated = false;
-  for (let i = 0; i <= 60; i++) {
-    const d = new Date(); d.setDate(d.getDate() - i);
-    const key = d.toISOString().split('T')[0];
-    // Fetch directly from Firestore so we don't hit a stale cache
-    try {
-      const daySnap = await getDoc(doc(db, 'users', currentUser.uid, 'days', key));
-      if (!daySnap.exists()) continue;
-      const dayData = daySnap.data();
-      const legacyTasks = dayData?.tasks?.schedule;
-      if (legacyTasks?.length) {
-        legacyTasks.forEach(t => {
-          if (!existingIds.has(t.id)) { scheduleCache.push(t); existingIds.add(t.id); migrated = true; }
+      document.querySelectorAll(".duration-field input").forEach(input => {
+        input.addEventListener("input", updatePresetSelection);
+      });
+      document.querySelectorAll(".preset").forEach(button => {
+        button.addEventListener("click", () => {
+          const presetMinutes = Number(button.dataset.minutes);
+          elements.hours.value = Math.floor(presetMinutes / 60);
+          elements.minutes.value = presetMinutes % 60;
+          elements.seconds.value = 0;
+          updatePresetSelection();
         });
-        // Clear from day doc
-        dayData.tasks.schedule = [];
-        await setDoc(doc(db, 'users', currentUser.uid, 'days', key), dayData);
-        localCache[key] = dayData;
-      }
-    } catch(e) {}
-  }
-  if (migrated) await saveScheduleDoc();
-}
-
-// ── SCHEDULE (persistent backlog) ─────────────────
-let scheduleCache = null;
-
-function scheduleDocRef() { return doc(db, 'users', currentUser.uid, 'meta', 'schedule'); }
-
-async function loadSchedule() {
-  try {
-    const snap = await getDoc(scheduleDocRef());
-    scheduleCache = snap.exists() ? (snap.data().tasks || []) : [];
-  } catch(e) { scheduleCache = scheduleCache || []; }
-  return scheduleCache;
-}
-
-async function saveScheduleDoc() {
-  try { await setDoc(scheduleDocRef(), { tasks: scheduleCache }); setSyncState('synced'); } catch(e) { setSyncState('error'); }
-}
-
-function renderSchedule() {
-  const tasks = scheduleCache || [];
-  document.getElementById('schedule-tasks').innerHTML = tasks.map(t => `
-    <div class="task-item ${t.done?'done':''}" id="sched-item-${t.id}" onclick="toggleScheduleTask(${t.id})">
-      <div class="task-check">${t.done?'✓':''}</div>
-      <div class="task-text" id="sched-text-${t.id}">${escHtml(t.text)}</div>
-      <button class="move-btn" onclick="event.stopPropagation();moveFromSchedule(${t.id},'flex')"  style="margin-right:4px">→ Flex</button>
-      <button class="move-btn" onclick="event.stopPropagation();moveFromSchedule(${t.id},'wind')" style="margin-right:4px">→ Wind</button>
-      <button class="move-btn" onclick="event.stopPropagation();moveFromSchedule(${t.id},'night')" style="margin-right:4px">→ Night</button>
-      <button class="edit-btn" onclick="event.stopPropagation();editScheduleTask(${t.id})">✏️</button>
-      <button class="task-del" onclick="event.stopPropagation();deleteScheduleTask(${t.id})">✕</button>
-    </div>`).join('');
-}
-
-window.addScheduleTask = async function() {
-  const input = document.getElementById('schedule-input');
-  const val = input.value.trim();
-  if (!val) return;
-  await loadSchedule();
-  scheduleCache.push({ text: val, done: false, id: Date.now() });
-  input.value = '';
-  setSyncState('syncing');
-  renderSchedule();
-  await saveScheduleDoc();
-};
-
-window.toggleScheduleTask = async function(id) {
-  await loadSchedule();
-  const t = scheduleCache.find(t => t.id === id);
-  if (t) { t.done = !t.done; setSyncState('syncing'); renderSchedule(); await saveScheduleDoc(); }
-};
-
-window.deleteScheduleTask = async function(id) {
-  await loadSchedule();
-  const task = scheduleCache.find(t => t.id === id);
-  if (task) await addToBin(task, 'schedule', 'persistent');
-  scheduleCache = scheduleCache.filter(t => t.id !== id);
-  setSyncState('syncing');
-  renderSchedule();
-  await saveScheduleDoc();
-  showToast('Moved to bin 🗑️');
-};
-
-// ── APP INIT ──────────────────────────────────────
-async function initApp() {
-  const today = new Date();
-  const todayIdx = today.getDay();
-  const d = DAYS[todayIdx];
-  const card = document.getElementById('anchor-card');
-  card.style.setProperty('--day-color', d.color);
-  const todayDs = await loadDay(dateKey());
-  document.getElementById('anchor-day-name').textContent = d.full;
-  document.getElementById('anchor-title').textContent = todayDs?.anchorDomain || d.domain;
-  document.getElementById('anchor-desc').textContent = (todayDs?.anchorSub || d.sub) + ' Phone face-down. Capture list ready.';
-
-  const opts = {weekday:'short', month:'short', day:'numeric'};
-  document.getElementById('date-label').textContent = today.toLocaleDateString('en-GB', opts);
-  const wk = getWeekKeys();
-  const mondayDate = new Date(today);
-  mondayDate.setDate(today.getDate()+(today.getDay()===0?-6:1-today.getDay()));
-  document.getElementById('week-label').textContent = 'Wk '+mondayDate.toLocaleDateString('en-GB',{day:'numeric',month:'short'});
-
-  const ds = await loadDay(dateKey());
-  setSyncState('synced');
-
-  if (ds.anchorStatus) applyAnchorStatus(ds.anchorStatus);
-  ['flex','wind','night','learn'].forEach(z => renderTasks(z, ds));
-  renderCaptures(ds);
-  await loadCarryOver();
-  await renderCurrentRead();
-  await loadSettings();
-  updateZoneTimeLabels();
-  updateActiveZone();
-  // Check every minute for zone transitions
-  setInterval(() => updateActiveZone(), 60000);
-}
-
-// ── ANCHOR STATUS ─────────────────────────────────
-window.setAnchorStatus = async function(status) {
-  const dk = dateKey();
-  const ds = await loadDay(dk);
-  ds.anchorStatus = status;
-  await saveDay(dk, ds);
-  applyAnchorStatus(status);
-  const msgs = { done:'⚓ Anchor locked in!', partial:'⚡ Partial counts. Push tomorrow.', missed:"❌ Logged. Tomorrow's anchor matters." };
-  showToast(msgs[status]);
-};
-
-function applyAnchorStatus(status) {
-  ['done','partial','missed'].forEach(s => document.getElementById('btn-'+s).classList.remove('selected-'+s));
-  if (status) document.getElementById('btn-'+status).classList.add('selected-'+status);
-}
-
-// ── TASKS ─────────────────────────────────────────
-window.handleEnter = function(e, zone) { if(e.key==='Enter') addTask(zone); };
-
-window.addTask = async function(zone) {
-  const input = document.getElementById(zone+'-input');
-  const val = input.value.trim();
-  if(!val) return;
-  const dk = dateKey();
-  const ds = await loadDay(dk);
-  if(!ds.tasks[zone]) ds.tasks[zone]=[];
-  ds.tasks[zone].push({text:val, done:false, id:Date.now()});
-  input.value = '';
-  await saveDay(dk, ds);
-  renderTasks(zone, ds);
-};
-
-window.toggleTask = async function(zone, id) {
-  const dk = dateKey();
-  const ds = await loadDay(dk);
-  const t = ds.tasks[zone].find(t=>t.id===id);
-  if(t) t.done = !t.done;
-  await saveDay(dk, ds);
-  renderTasks(zone, ds);
-};
-
-window.deleteTask = async function(zone, id) {
-  const dk = dateKey();
-  const ds = await loadDay(dk);
-  const task = ds.tasks[zone].find(t=>t.id===id);
-  if(task) await addToBin(task, zone, dk);
-  ds.tasks[zone] = ds.tasks[zone].filter(t=>t.id!==id);
-  if(!ds.deletedIds) ds.deletedIds = [];
-  if(!ds.deletedIds.includes(id)) ds.deletedIds.push(id);
-  await saveDay(dk, ds);
-  renderTasks(zone, ds);
-  showToast('Moved to bin 🗑️');
-};
-
-function renderTasks(zone, ds) {
-  const tasks = ds?.tasks?.[zone] || [];
-  document.getElementById(zone+'-tasks').innerHTML = tasks.map(t=>`
-    <div class="task-item ${t.done?'done':''}" id="task-${zone}-${t.id}" onclick="toggleTask('${zone}',${t.id})">
-      <div class="task-check">${t.done?'✓':''}</div>
-      <div class="task-text" id="task-text-${zone}-${t.id}">${escHtml(t.text)}</div>
-      ${zone==='flex'  ? `<button class="move-btn" onclick="event.stopPropagation();moveToWind(${t.id})" style="margin-right:4px">→ Wind</button>` : ''}
-      ${zone==='wind'  ? `<button class="move-btn" onclick="event.stopPropagation();moveToNight(${t.id})" style="margin-right:4px">→ Night</button>` : ''}
-      ${zone==='night' ? `<button class="move-btn" onclick="event.stopPropagation();moveToWind(${t.id})" style="margin-right:4px">→ Wind</button>` : ''}
-      <button class="edit-btn" onclick="event.stopPropagation();editTask('${zone}',${t.id})">✏️</button>
-      <button class="task-del" onclick="event.stopPropagation();deleteTask('${zone}',${t.id})">✕</button>
-    </div>`).join('');
-}
-
-window.moveToWind = async function(id) {
-  const dk = dateKey();
-  const ds = await loadDay(dk);
-  // find task in flex or night
-  const srcZone = (ds.tasks.flex||[]).find(t=>t.id===id) ? 'flex' : 'night';
-  const task = (ds.tasks[srcZone]||[]).find(t=>t.id===id);
-  if(task) {
-    if(!ds.tasks.wind) ds.tasks.wind = [];
-    ds.tasks.wind.push({...task, done:false});
-    ds.tasks[srcZone] = ds.tasks[srcZone].filter(t=>t.id!==id);
-    await saveDay(dk, ds);
-    renderTasks(srcZone, ds);
-    renderTasks('wind', ds);
-    showToast('Moved to Wind-Down ✓');
-  }
-};
-
-window.moveToNight = async function(id) {
-  const dk = dateKey();
-  const ds = await loadDay(dk);
-  const task = (ds.tasks.wind||[]).find(t=>t.id===id);
-  if(task) {
-    if(!ds.tasks.night) ds.tasks.night = [];
-    ds.tasks.night.push({...task, done:false});
-    ds.tasks.wind = ds.tasks.wind.filter(t=>t.id!==id);
-    await saveDay(dk, ds);
-    renderTasks('wind', ds);
-    renderTasks('night', ds);
-    showToast('Moved to Night Shift ✓');
-  }
-};
-
-window.moveFromSchedule = async function(id, toZone) {
-  await loadSchedule();
-  const task = scheduleCache.find(t => t.id === id);
-  if (task) {
-    const dk = dateKey();
-    const ds = await loadDay(dk);
-    if (!ds.tasks[toZone]) ds.tasks[toZone] = [];
-    ds.tasks[toZone].push({...task, done: false});
-    scheduleCache = scheduleCache.filter(t => t.id !== id);
-    await Promise.all([saveDay(dk, ds), saveScheduleDoc()]);
-    renderSchedule();
-    renderTasks(toZone, ds);
-    const labels = {flex:'Flex Zone', wind:'Wind-Down', night:'Night Shift'};
-    showToast(`Moved to ${labels[toZone]} ✓`);
-  }
-};
-
-// ── CAPTURES ──────────────────────────────────────
-window.addCapture = async function() {
-  const input = document.getElementById('capture-input');
-  const val = input.value.trim();
-  if(!val) return;
-  const dk = dateKey();
-  const ds = await loadDay(dk);
-  if(!ds.captures) ds.captures=[];
-  ds.captures.push({text:val, id:Date.now()});
-  input.value = '';
-  await saveDay(dk, ds);
-  renderCaptures(ds);
-  showToast('📝 Captured. Back to work!');
-};
-
-window.moveToFlex = async function(id) {
-  const dk = dateKey();
-  const ds = await loadDay(dk);
-  const item = ds.captures.find(c=>c.id===id);
-  if(item) {
-    ds.tasks.flex.push({text:item.text, done:false, id:Date.now()});
-    ds.captures = ds.captures.filter(c=>c.id!==id);
-    await saveDay(dk, ds);
-    renderCaptures(ds);
-    renderTasks('flex', ds);
-    showToast('Moved to Flex Zone ✓');
-  }
-};
-
-window.deleteCapture = async function(id) {
-  const dk = dateKey();
-  const ds = await loadDay(dk);
-  const item = ds.captures.find(c=>c.id===id);
-  if(item) await addToBin({...item, text:item.text}, 'capture', dk);
-  ds.captures = ds.captures.filter(c=>c.id!==id);
-  await saveDay(dk, ds);
-  renderCaptures(ds);
-  showToast('Moved to bin 🗑️');
-};
-
-function renderCaptures(ds) {
-  const items = ds?.captures || [];
-  document.getElementById('capture-count').textContent = items.length+' item'+(items.length!==1?'s':'');
-  document.getElementById('capture-list').innerHTML = items.map(c=>`
-    <div class="captured-item" id="cap-item-${c.id}">
-      <div style="flex:1;font-size:0.82rem" id="cap-text-${c.id}">${escHtml(c.text)}</div>
-      <button class="move-btn" onclick="moveToFlex(${c.id})">→ Flex</button>
-      <button class="edit-btn" onclick="editCapture(${c.id})">✏️</button>
-      <button class="task-del" onclick="deleteCapture(${c.id})" style="margin-left:4px">✕</button>
-    </div>`).join('');
-}
-
-// ── WEEK VIEW ─────────────────────────────────────
-window.showView = async function(id, tabBtn, navId, sbId) {
-  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
-  document.getElementById('view-'+id).classList.add('active');
-  if(tabBtn){ document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active')); tabBtn.classList.add('active'); }
-  if(navId){ document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active')); document.getElementById(navId).classList.add('active'); }
-  const sbTarget = sbId || 'sb-'+id;
-  document.querySelectorAll('.sidebar-btn').forEach(b=>b.classList.remove('active'));
-  const sbEl = document.getElementById(sbTarget); if(sbEl) sbEl.classList.add('active');
-  if(id==='today') { updateActiveZone(); }
-  if(id==='week') await renderWeek();
-  if(id==='review') { reviewWeekOffset = 0; await renderReview(); }
-  if(id==='bin') await renderBin();
-  if(id==='library') await renderLibrary();
-  if(id==='schedule') { await migrateScheduleFromDays(); await loadSchedule(); renderSchedule(); }
-  if(id==='settings') { await loadSettings(); renderSettingsView(); }
-};
-
-async function renderWeek() {
-  const weekKeys = getWeekKeys();
-  const todayK = dateKey();
-  const grid = document.getElementById('week-grid');
-  grid.innerHTML = '<div style="color:var(--muted);font-size:0.8rem;padding:8px 0;">Loading…</div>';
-  const dayData = await Promise.all(weekKeys.map(({key})=>loadDay(key)));
-  grid.innerHTML = weekKeys.map(({key,dayIdx},i)=>{
-    const d = DAYS[dayIdx];
-    const ds = dayData[i];
-    const status = ds?.anchorStatus || null;
-    const isToday = key===todayK;
-    const label = new Date(key).toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
-    // Use saved overrides if present, otherwise defaults
-    const domainName = ds?.anchorDomain || d.domain;
-    const domainSub  = ds?.anchorSub   || d.sub;
-    return `
-      <div class="week-row ${isToday?'today-row':''}" style="--day-color:${d.color}" id="week-row-${key}">
-        <div class="week-day-name" style="cursor:pointer" onclick="openDayDetail('${key}','${label}')">${d.name}</div>
-        <div class="week-domain">
-          <div class="week-domain-name" id="wdn-${key}">${d.icon} ${escHtml(domainName)}</div>
-          <div class="week-domain-sub" id="wds-${key}">${isToday?'← TODAY · ':''}<span style="font-size:0.65rem;color:var(--muted)">${escHtml(domainSub)}</span></div>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
-          <button class="edit-btn" onclick="editAnchor('${key}','${dayIdx}')" title="Edit anchor">✏️</button>
-          <div class="week-status-btns">
-            <div class="mini-status ${status==='done'?'sel-done':''}" onclick="setWeekStatus('${key}','done')">✅</div>
-            <div class="mini-status ${status==='partial'?'sel-partial':''}" onclick="setWeekStatus('${key}','partial')">⚡</div>
-            <div class="mini-status ${status==='missed'?'sel-missed':''}" onclick="setWeekStatus('${key}','missed')">❌</div>
-          </div>
-        </div>
-      </div>
-      <div id="anchor-edit-${key}" style="display:none;padding:10px 14px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:0 0 12px 12px;margin-top:-8px;margin-bottom:8px;">
-        <div style="font-size:0.65rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">Edit Anchor</div>
-        <input id="anchor-domain-${key}" class="task-input" style="margin-bottom:8px;" value="${escHtml(domainName)}" placeholder="Domain / focus area">
-        <input id="anchor-sub-${key}" class="task-input" style="margin-bottom:10px;" value="${escHtml(domainSub)}" placeholder="Description">
-        <div style="display:flex;gap:8px;">
-          <button class="book-save-btn" onclick="saveAnchorEdit('${key}')">Save</button>
-          <button class="cr-change-btn" onclick="resetAnchorEdit('${key}','${dayIdx}')">Reset to default</button>
-          <button class="cr-change-btn" onclick="document.getElementById('anchor-edit-${key}').style.display='none'">Cancel</button>
-        </div>
-      </div>`;
-  }).join('');
-
-  // Clickable 14-day history dots
-  document.getElementById('week-history').innerHTML = Array.from({length:14},(_,i)=>{
-    const dd=new Date(); dd.setDate(dd.getDate()-(13-i));
-    const k=dd.toISOString().split('T')[0];
-    const s=localCache[k]?.anchorStatus;
-    const cls=s==='done'?'done':s==='partial'?'partial':s==='missed'?'missed':'';
-    const icon=s==='done'?'✅':s==='partial'?'⚡':s==='missed'?'❌':dd.toLocaleDateString('en-GB',{day:'numeric'});
-    const label=dd.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
-    return `<div class="hist-dot ${cls}" title="${label}" onclick="openDayDetail('${k}','${label}')">${icon}</div>`;
-  }).join('');
-}
-
-window.setWeekStatus = async function(key, status) {
-  const ds = await loadDay(key);
-  ds.anchorStatus = status;
-  await saveDay(key, ds);
-  await renderWeek();
-  if(key===dateKey()) applyAnchorStatus(status);
-  showToast('Logged ✓');
-};
-
-// ── REVIEW ────────────────────────────────────────
-
-// Load every day doc from Firestore into localCache for accurate historical stats
-async function loadAllDays() {
-  if (allDaysLoaded) return;
-  const label = document.getElementById('stats-loading-label');
-  if (label) label.textContent = '(loading all history…)';
-  try {
-    const snap = await getDocs(collection(db, 'users', currentUser.uid, 'days'));
-    snap.forEach(d => {
-      if (!d.id.startsWith('review_')) localCache[d.id] = d.data();
-    });
-    allDaysLoaded = true;
-  } catch(e) {}
-  if (label) label.textContent = '';
-}
-
-function getReviewWeekMonday(offset) {
-  const today = new Date();
-  const dow = today.getDay();
-  const mondayOffset = dow === 0 ? -6 : 1 - dow;
-  const m = new Date(today);
-  m.setDate(today.getDate() + mondayOffset + offset * 7);
-  m.setHours(0,0,0,0);
-  return m;
-}
-
-function getReviewKey(offset) {
-  return 'review_' + getReviewWeekMonday(offset).toISOString().split('T')[0];
-}
-
-async function renderReview() {
-  // Load full history for accurate stats (cached after first load)
-  await loadAllDays();
-
-  // Streak — walk back through localCache
-  let streak = 0;
-  for (let i = 0; i < 365; i++) {
-    const d = new Date(); d.setDate(d.getDate() - i);
-    const key = d.toISOString().split('T')[0];
-    const ds = localCache[key] || await loadDay(key);
-    if (ds?.anchorStatus === 'done') streak++;
-    else break;
-  }
-  document.getElementById('streak-num').textContent = streak;
-
-  // Completion rate — all tracked days
-  const allDayKeys = Object.keys(localCache).filter(k => !k.startsWith('review_'));
-  const tracked = allDayKeys.filter(k => localCache[k]?.anchorStatus).length;
-  const done = allDayKeys.filter(k => localCache[k]?.anchorStatus === 'done').length;
-  document.getElementById('completion-rate').textContent = tracked ? Math.round(done/tracked*100)+'%' : '—';
-
-  // Domain bars — full history
-  const domains = ['GECO — Production','GECO — Strategy','Construction / QS','Health & Fitness','Wildcard'];
-  const domainDone={}, domainTotal={};
-  allDayKeys.forEach(k => {
-    const ds = localCache[k];
-    if (!ds?.anchorStatus) return;
-    const dayIdx = new Date(k).getDay();
-    const domain = DAYS[dayIdx].domain;
-    domainTotal[domain] = (domainTotal[domain]||0) + 1;
-    if (ds.anchorStatus === 'done') domainDone[domain] = (domainDone[domain]||0) + 1;
-  });
-  document.getElementById('domain-bars').innerHTML = domains.map(dom => {
-    const total=domainTotal[dom]||0, doneN=domainDone[dom]||0;
-    const pct = total ? Math.round(doneN/total*100) : 0;
-    const color = DOMAIN_COLORS[dom]||'var(--accent)';
-    return `<div class="domain-bar-row">
-      <div class="domain-bar-header"><span class="domain-bar-name">${dom}</span><span class="domain-bar-pct">${doneN}/${total} · ${pct}%</span></div>
-      <div class="domain-bar-track"><div class="domain-bar-fill" style="width:${pct}%;background:var(--silver)"></div></div>
-    </div>`;
-  }).join('');
-
-  // Non-interactive anchor strip
-  document.getElementById('review-anchor-strip').innerHTML = Array.from({length:14},(_,i)=>{
-    const dd=new Date(); dd.setDate(dd.getDate()-(13-i));
-    const k=dd.toISOString().split('T')[0];
-    const s=localCache[k]?.anchorStatus;
-    const cls=s==='done'?'done':s==='partial'?'partial':s==='missed'?'missed':'';
-    const icon=s==='done'?'✅':s==='partial'?'⚡':s==='missed'?'❌':dd.toLocaleDateString('en-GB',{day:'numeric'});
-    return `<div class="hist-dot ${cls}" style="cursor:default">${icon}</div>`;
-  }).join('');
-
-  // Load review for current offset week
-  await loadReviewWeek();
-}
-
-async function loadReviewWeek() {
-  const monday = getReviewWeekMonday(reviewWeekOffset);
-  const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6);
-  const fmt = d => d.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
-  document.getElementById('review-week-label').textContent =
-    reviewWeekOffset === 0 ? 'This week' : reviewWeekOffset === -1 ? 'Last week' : `Week of ${fmt(monday)}`;
-  document.getElementById('review-week-sub').textContent = `${fmt(monday)} – ${fmt(sunday)}`;
-  document.getElementById('review-next-btn').disabled = reviewWeekOffset >= 0;
-
-  const rv = await loadDay(getReviewKey(reviewWeekOffset));
-  ['q1','q2','q3','q4'].forEach(q => {
-    const el = document.getElementById('review-'+q);
-    if (el) el.value = rv?.[q] || '';
-  });
-}
-
-window.navigateReviewWeek = async function(dir) {
-  reviewWeekOffset = Math.min(0, reviewWeekOffset + dir);
-  await loadReviewWeek();
-};
-
-window.saveReview = async function() {
-  await saveDay(getReviewKey(reviewWeekOffset), {
-    q1: document.getElementById('review-q1').value,
-    q2: document.getElementById('review-q2').value,
-    q3: document.getElementById('review-q3').value,
-    q4: document.getElementById('review-q4').value,
-  });
-  showToast(reviewWeekOffset === 0 ? '✓ Review saved & synced' : '✓ Past review updated');
-};
-
-// ── CURRENT READ ──────────────────────────────────
-function currentReadDocRef() { return doc(db,'users',currentUser.uid,'meta','currentRead'); }
-function libraryDocRef()     { return doc(db,'users',currentUser.uid,'meta','library'); }
-
-let currentReadCache = null;
-let libraryCache = null;
-let currentLibTab = 'reading';
-
-async function loadCurrentRead() {
-  try {
-    const snap = await getDoc(currentReadDocRef());
-    currentReadCache = snap.exists() ? snap.data() : null;
-  } catch(e) { currentReadCache = null; }
-  return currentReadCache;
-}
-
-async function saveCurrentRead(data) {
-  currentReadCache = data;
-  try {
-    if(data) await setDoc(currentReadDocRef(), data);
-    else await setDoc(currentReadDocRef(), {});
-  } catch(e) {}
-}
-
-async function loadLibrary() {
-  try {
-    const snap = await getDoc(libraryDocRef());
-    libraryCache = snap.exists() ? (snap.data().books || []) : [];
-  } catch(e) { libraryCache = libraryCache || []; }
-  return libraryCache;
-}
-
-async function saveLibrary(books) {
-  libraryCache = books;
-  try { await setDoc(libraryDocRef(), { books }); } catch(e) {}
-}
-
-async function renderCurrentRead() {
-  const cr = await loadCurrentRead();
-  if (!cr || !cr.title) {
-    document.getElementById('cr-set-form').style.display = 'block';
-    document.getElementById('cr-active-block').style.display = 'none';
-    return;
-  }
-  document.getElementById('cr-set-form').style.display = 'none';
-  document.getElementById('cr-active-block').style.display = 'block';
-  document.getElementById('cr-book-title').textContent = cr.title;
-  document.getElementById('cr-total-pages').textContent = cr.totalPages;
-  document.getElementById('cr-last-page').value = cr.lastPage || 0;
-  const pct = cr.totalPages ? Math.min(100, Math.round((cr.lastPage||0) / cr.totalPages * 100)) : 0;
-  document.getElementById('cr-progress-fill').style.width = pct + '%';
-  document.getElementById('cr-pct').textContent = pct + '%';
-}
-
-window.startReading = async function() {
-  const title = document.getElementById('cr-title-input').value.trim();
-  const pages = parseInt(document.getElementById('cr-pages-input').value);
-  if(!title) { showToast('Enter a book title', true); return; }
-  if(!pages || pages < 1) { showToast('Enter total pages', true); return; }
-  const cr = { title, totalPages: pages, lastPage: 0, startedAt: Date.now() };
-  await saveCurrentRead(cr);
-  // Also add to library as 'reading' if not already there
-  const books = await loadLibrary();
-  const exists = books.find(b => b.title.toLowerCase() === title.toLowerCase());
-  if(!exists) { books.push({ id: Date.now(), title, totalPages: pages, lastPage: 0, status: 'reading', startedAt: Date.now() }); await saveLibrary(books); }
-  document.getElementById('cr-title-input').value = '';
-  document.getElementById('cr-pages-input').value = '';
-  await renderCurrentRead();
-  showToast('📖 Started reading!');
-};
-
-window.updateLastPage = async function() {
-  const cr = await loadCurrentRead();
-  if(!cr) return;
-  const page = parseInt(document.getElementById('cr-last-page').value) || 0;
-  cr.lastPage = Math.min(page, cr.totalPages);
-  await saveCurrentRead(cr);
-  // Update in library too
-  const books = await loadLibrary();
-  const book = books.find(b => b.title === cr.title && b.status === 'reading');
-  if(book) { book.lastPage = cr.lastPage; await saveLibrary(books); }
-  await renderCurrentRead();
-  if(cr.lastPage >= cr.totalPages) {
-    await finishBook(cr);
-  }
-};
-
-async function finishBook(cr) {
-  // Move to completed in library
-  const books = await loadLibrary();
-  const idx = books.findIndex(b => b.title === cr.title && b.status === 'reading');
-  if(idx > -1) { books[idx].status = 'completed'; books[idx].completedAt = Date.now(); books[idx].lastPage = cr.totalPages; }
-  else { books.push({ id: Date.now(), title: cr.title, totalPages: cr.totalPages, lastPage: cr.totalPages, status: 'completed', startedAt: cr.startedAt, completedAt: Date.now() }); }
-  await saveLibrary(books);
-  await saveCurrentRead(null);
-  // Show modal
-  document.getElementById('completion-book-name').textContent = cr.title;
-  document.getElementById('completion-modal').style.display = 'flex';
-}
-
-window.dismissCompletion = async function() {
-  document.getElementById('completion-modal').style.display = 'none';
-  await renderCurrentRead();
-};
-
-window.changeBook = async function() {
-  await saveCurrentRead(null);
-  await renderCurrentRead();
-};
-
-// ── LIBRARY ───────────────────────────────────────
-window.switchLibTab = function(tab) {
-  currentLibTab = tab;
-  document.querySelectorAll('.lib-tab').forEach(t => t.classList.remove('active'));
-  document.getElementById('libtab-'+tab).classList.add('active');
-  renderLibraryBooks();
-};
-
-async function renderLibrary() {
-  await loadLibrary();
-  renderLibraryBooks();
-}
-
-function renderLibraryBooks() {
-  const books = (libraryCache || []).filter(b => b.status === currentLibTab);
-  const list = document.getElementById('lib-books-list');
-  if(!books.length) {
-    const labels = { reading:'No books currently reading', want:'No books on your want list', completed:'No completed books yet' };
-    list.innerHTML = `<div class="lib-section-empty">${labels[currentLibTab]}</div>`;
-    return;
-  }
-  list.innerHTML = books.slice().reverse().map(b => {
-    const badgeClass = { reading:'badge-reading', want:'badge-want', completed:'badge-completed' }[b.status];
-    const badgeText = { reading:'Reading', want:'Want', completed:'Done' }[b.status];
-    let extra = '';
-    if(b.status === 'reading' && b.totalPages) {
-      const pct = Math.min(100, Math.round((b.lastPage||0) / b.totalPages * 100));
-      extra = `<div class="book-progress-row">
-        <div class="cr-progress-track" style="flex:1"><div class="cr-progress-fill" style="width:${pct}%"></div></div>
-        <span class="cr-pct">${pct}%</span>
-      </div>`;
-    }
-    if(b.status === 'completed' && b.completedAt) {
-      extra = `<div class="book-date">Finished ${new Date(b.completedAt).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}</div>`;
-    }
-    return `<div class="book-card" id="book-card-${b.id}">
-      <div class="book-card-header">
-        <div class="book-title-text">${escHtml(b.title)}</div>
-        <span class="book-status-badge ${badgeClass}">${badgeText}</span>
-      </div>
-      ${b.totalPages ? `<div class="book-date" style="color:var(--muted);font-size:0.7rem">${b.totalPages} pages</div>` : ''}
-      ${extra}
-      <div style="display:flex;gap:6px;margin-top:4px;flex-wrap:wrap;">
-        ${b.status!=='reading'  ? `<button class="cr-change-btn" onclick="moveBookStatus(${b.id},'reading')">→ Reading</button>` : ''}
-        ${b.status!=='want'     ? `<button class="cr-change-btn" onclick="moveBookStatus(${b.id},'want')">→ Want</button>` : ''}
-        ${b.status!=='completed'? `<button class="cr-change-btn" onclick="moveBookStatus(${b.id},'completed')">→ Done</button>` : ''}
-        <button class="edit-btn" onclick="editBook(${b.id})">✏️</button>
-        <button class="book-del-btn" onclick="deleteBook(${b.id})" style="margin-left:auto">✕</button>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-window.addBookToLibrary = async function() {
-  const title = document.getElementById('lib-title-input').value.trim();
-  const pages = parseInt(document.getElementById('lib-pages-input').value) || null;
-  const status = document.getElementById('lib-status-select').value;
-  if(!title) { showToast('Enter a book title', true); return; }
-  const books = await loadLibrary();
-  books.push({ id: Date.now(), title, totalPages: pages, lastPage: 0, status, startedAt: Date.now(), completedAt: status==='completed' ? Date.now() : null });
-  await saveLibrary(books);
-  document.getElementById('lib-title-input').value = '';
-  document.getElementById('lib-pages-input').value = '';
-  currentLibTab = status;
-  document.querySelectorAll('.lib-tab').forEach(t => t.classList.remove('active'));
-  document.getElementById('libtab-'+status).classList.add('active');
-  renderLibraryBooks();
-  showToast('📚 Added to library');
-};
-
-window.moveBookStatus = async function(id, status) {
-  const books = await loadLibrary();
-  const b = books.find(b=>b.id===id);
-  if(b) { b.status = status; if(status==='completed') b.completedAt = Date.now(); await saveLibrary(books); renderLibraryBooks(); }
-};
-
-window.deleteBook = async function(id) {
-  const books = await loadLibrary();
-  await saveLibrary(books.filter(b=>b.id!==id));
-  renderLibraryBooks();
-  showToast('Book removed');
-};
-
-// ── DAY DETAIL ────────────────────────────────────
-window.openDayDetail = async function(dateK, label) {
-  const ds = await loadDay(dateK);
-  document.getElementById('day-modal-title').textContent = label;
-
-  const anchorStatus = ds?.anchorStatus;
-  const statusLabel = anchorStatus === 'done' ? '✅ Completed' : anchorStatus === 'partial' ? '⚡ Partial' : anchorStatus === 'missed' ? '❌ Missed' : '— Not logged';
-
-  function taskList(tasks) {
-    if (!tasks?.length) return `<div class="day-modal-empty">Nothing logged</div>`;
-    return tasks.map(t => `
-      <div class="day-modal-task ${t.done ? 'done-task' : ''}">
-        <span class="day-modal-check">${t.done ? '✓' : '○'}</span>
-        <span>${escHtml(t.text)}</span>
-      </div>`).join('');
-  }
-
-  function captureList(items) {
-    if (!items?.length) return `<div class="day-modal-empty">Nothing captured</div>`;
-    return items.map(c => `
-      <div class="day-modal-task">
-        <span class="day-modal-check">📝</span>
-        <span>${escHtml(c.text)}</span>
-      </div>`).join('');
-  }
-
-  document.getElementById('day-modal-body').innerHTML = `
-    <div class="day-modal-section">
-      <div class="day-modal-section-title">⚓ Anchor Block</div>
-      <div class="day-modal-task"><span>${statusLabel}</span></div>
-    </div>
-    <div class="day-modal-section">
-      <div class="day-modal-section-title">📋 Schedule</div>
-      ${taskList(ds?.tasks?.schedule)}
-    </div>
-    <div class="day-modal-section">
-      <div class="day-modal-section-title">☀️ Flex Zone</div>
-      ${taskList(ds?.tasks?.flex)}
-    </div>
-    <div class="day-modal-section">
-      <div class="day-modal-section-title">🌆 Wind-Down</div>
-      ${taskList(ds?.tasks?.wind)}
-    </div>
-    <div class="day-modal-section">
-      <div class="day-modal-section-title">🌃 Night Shift</div>
-      ${taskList(ds?.tasks?.night)}
-    </div>
-    <div class="day-modal-section">
-      <div class="day-modal-section-title">🌙 Learning</div>
-      ${taskList(ds?.tasks?.learn)}
-    </div>
-    <div class="day-modal-section">
-      <div class="day-modal-section-title">📝 Capture List</div>
-      ${captureList(ds?.captures)}
-    </div>`;
-
-  document.getElementById('day-modal').style.display = 'flex';
-};
-
-window.closeDayModal = function(e) {
-  if (e.target === document.getElementById('day-modal')) {
-    document.getElementById('day-modal').style.display = 'none';
-  }
-};
-
-// ── BIN VIEW ──────────────────────────────────────
-async function renderBin() {
-  const items = await loadBin();
-  const list = document.getElementById('bin-list');
-  const meta = document.getElementById('bin-meta');
-  if (!items.length) {
-    meta.textContent = 'Items are permanently deleted after 24 hours';
-    list.innerHTML = '<div class="bin-empty"><span class="bin-icon">🗑️</span>Bin is empty</div>';
-    return;
-  }
-  meta.textContent = `${items.length} item${items.length!==1?'s':''} · auto-deleted after 24 hours`;
-  const now = Date.now();
-  list.innerHTML = items.slice().reverse().map(i => {
-    const age = Math.floor((now - i.deletedAt) / 60000);
-    const ageStr = age < 60 ? `${age}m ago` : `${Math.floor(age/60)}h ago`;
-    const zoneLabel = {flex:'Flex Zone', wind:'Wind-Down', learn:'Learning', capture:'Capture'}[i.zone] || i.zone;
-    return `<div class="bin-item">
-      <div class="bin-item-info">
-        <div class="bin-item-text">${escHtml(i.text)}</div>
-        <div class="bin-item-meta">${zoneLabel} · ${ageStr}</div>
-      </div>
-      <button class="bin-restore" onclick="restoreFromBin(${i.id})">Restore</button>
-      <button class="bin-perm-del" onclick="permanentDelete(${i.id})">✕</button>
-    </div>`;
-  }).join('') + `<button class="bin-clear-btn" onclick="clearBin()">🗑️ Empty bin now</button>`;
-}
-
-window.restoreFromBin = async function(id) {
-  const items = await loadBin();
-  const item = items.find(i=>i.id===id);
-  if(!item) return;
-  const dk = dateKey();
-  const ds = await loadDay(dk);
-  if(item.zone === 'capture') {
-    if(!ds.captures) ds.captures=[];
-    ds.captures.push({id:item.id, text:item.text});
-  } else {
-    if(!ds.tasks[item.zone]) ds.tasks[item.zone]=[];
-    ds.tasks[item.zone].push({id:item.id, text:item.text, done:false});
-  }
-  await saveDay(dk, ds);
-  await saveBin(items.filter(i=>i.id!==id));
-  if(item.zone==='capture') renderCaptures(ds);
-  else renderTasks(item.zone, ds);
-  await renderBin();
-  showToast('Restored ✓');
-};
-
-window.permanentDelete = async function(id) {
-  const items = await loadBin();
-  await saveBin(items.filter(i=>i.id!==id));
-  await renderBin();
-};
-
-window.clearBin = async function() {
-  await saveBin([]);
-  await renderBin();
-  showToast('Bin emptied');
-};
-
-
-// ── ANCHOR EDITING (Week view) ────────────────────
-window.editAnchor = function(key, dayIdx) {
-  const panel = document.getElementById(`anchor-edit-${key}`);
-  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
-};
-
-window.saveAnchorEdit = async function(key) {
-  const domain = document.getElementById(`anchor-domain-${key}`).value.trim();
-  const sub    = document.getElementById(`anchor-sub-${key}`).value.trim();
-  if (!domain) return;
-  const ds = await loadDay(key);
-  ds.anchorDomain = domain;
-  ds.anchorSub    = sub;
-  await saveDay(key, ds);
-  document.getElementById(`anchor-edit-${key}`).style.display = 'none';
-  await renderWeek();
-  showToast('Anchor updated ✓');
-  // Also refresh Today if this key is today
-  if (key === dateKey()) initApp();
-};
-
-window.resetAnchorEdit = async function(key, dayIdx) {
-  const d = DAYS[parseInt(dayIdx)];
-  const ds = await loadDay(key);
-  delete ds.anchorDomain;
-  delete ds.anchorSub;
-  await saveDay(key, ds);
-  document.getElementById(`anchor-edit-${key}`).style.display = 'none';
-  await renderWeek();
-  showToast('Reset to default ✓');
-  if (key === dateKey()) initApp();
-};
-
-// ── SETTINGS ──────────────────────────────────────
-const DEFAULT_ZONE_TIMES = {
-  flex:  { start:'08:00' },
-  wind:  { start:'13:00' },
-  night: { start:'18:00' },
-  learn: { start:'21:00' },
-};
-const ZONE_DEFS = [
-  { key:'flex',  icon:'☀️', name:'Flex Zone' },
-  { key:'wind',  icon:'🌆', name:'Wind-Down' },
-  { key:'night', icon:'🌃', name:'Night Shift' },
-  { key:'learn', icon:'🌙', name:'Learning' },
-];
-let settingsCache = null;
-
-function settingsDocRef() { return doc(db,'users',currentUser.uid,'meta','settings'); }
-
-async function loadSettings() {
-  try {
-    const snap = await getDoc(settingsDocRef());
-    settingsCache = snap.exists() ? snap.data() : { zoneTimes: {...DEFAULT_ZONE_TIMES}, highlight:true, toastOnTransition:true };
-  } catch(e) { settingsCache = settingsCache || { zoneTimes: {...DEFAULT_ZONE_TIMES}, highlight:true, toastOnTransition:true }; }
-  if (!settingsCache.zoneTimes) settingsCache.zoneTimes = {...DEFAULT_ZONE_TIMES};
-  return settingsCache;
-}
-
-async function saveSettings() {
-  try { await setDoc(settingsDocRef(), settingsCache); } catch(e) {}
-}
-
-function timeToMinutes(t) {
-  const [h,m] = t.split(':').map(Number);
-  return h*60 + m;
-}
-
-function minutesToTime(m) {
-  const h = Math.floor(m/60) % 24;
-  const mm = m % 60;
-  return `${String(h).padStart(2,'0')}:${String(mm).padStart(2,'0')}`;
-}
-
-function getZoneEndTime(zoneKey) {
-  const keys = ZONE_DEFS.map(z => z.key);
-  const idx = keys.indexOf(zoneKey);
-  const zt = settingsCache?.zoneTimes || DEFAULT_ZONE_TIMES;
-  if (idx < keys.length - 1) {
-    const nextStart = timeToMinutes(zt[keys[idx+1]]?.start || DEFAULT_ZONE_TIMES[keys[idx+1]].start);
-    return minutesToTime(nextStart - 10);
-  }
-  return '23:00';
-}
-
-function renderSettingsView() {
-  // Populate rest message
-  const rmEl = document.getElementById('setting-rest-message');
-  if (rmEl) rmEl.value = settingsCache?.restMessage || DEFAULT_REST_MESSAGE;
-
-  const zt = settingsCache?.zoneTimes || DEFAULT_ZONE_TIMES;
-  document.getElementById('zone-time-settings').innerHTML = ZONE_DEFS.map(z => {
-    const start = zt[z.key]?.start || DEFAULT_ZONE_TIMES[z.key].start;
-    const end = getZoneEndTime(z.key);
-    return `<div class="zt-row">
-      <span class="zt-icon">${z.icon}</span>
-      <span class="zt-name">${z.name}</span>
-      <div style="display:flex;flex-direction:column;gap:3px;align-items:flex-end">
-        <input class="zt-input" type="time" id="zt-${z.key}" value="${start}" oninput="updateZoneEndPreview()">
-        <span class="zt-range" id="zt-end-${z.key}">ends ${end}</span>
-      </div>
-    </div>`;
-  }).join('');
-  // Restore general settings toggles
-  const s = settingsCache || {};
-  const hlEl = document.getElementById('setting-highlight');
-  const toastEl = document.getElementById('setting-toast');
-  if (hlEl) hlEl.checked = s.highlight !== false;
-  if (toastEl) toastEl.checked = s.toastOnTransition !== false;
-}
-
-window.updateZoneEndPreview = function() {
-  // Temporarily update cache from inputs to recalculate ends
-  const zt = {};
-  ZONE_DEFS.forEach(z => { const el = document.getElementById(`zt-${z.key}`); if(el) zt[z.key] = { start: el.value }; });
-  const prev = settingsCache.zoneTimes;
-  settingsCache.zoneTimes = zt;
-  ZONE_DEFS.forEach(z => { const el = document.getElementById(`zt-end-${z.key}`); if(el) el.textContent = `ends ${getZoneEndTime(z.key)}`; });
-  settingsCache.zoneTimes = prev;
-};
-
-window.saveZoneTimes = async function() {
-  const zt = {};
-  ZONE_DEFS.forEach(z => { const el = document.getElementById(`zt-${z.key}`); if(el) zt[z.key] = { start: el.value }; });
-  settingsCache.zoneTimes = zt;
-  await saveSettings();
-  renderSettingsView();
-  updateActiveZone();
-  updateZoneTimeLabels();
-  showToast('Zone times saved ✓');
-};
-
-window.saveGeneralSettings = async function() {
-  settingsCache.highlight = document.getElementById('setting-highlight')?.checked !== false;
-  settingsCache.toastOnTransition = document.getElementById('setting-toast')?.checked !== false;
-  await saveSettings();
-  updateActiveZone();
-};
-
-window.saveRestMessage = async function() {
-  const val = document.getElementById('setting-rest-message')?.value.trim();
-  if (!val) return;
-  settingsCache.restMessage = val;
-  await saveSettings();
-  const el = document.getElementById('rest-message-text');
-  if (el) el.textContent = val;
-  showToast('Message saved ✓');
-};
-
-// ── ACTIVE ZONE DETECTION ──────────────────────────
-const DEFAULT_REST_MESSAGE = 'Good Night. Tomorrow you conquer again.';
-let lastActiveZone = null;
-
-function getActiveZone() {
-  const now = new Date();
-  const cur = now.getHours()*60 + now.getMinutes();
-  const zt = settingsCache?.zoneTimes || DEFAULT_ZONE_TIMES;
-  const keys = ZONE_DEFS.map(z => z.key);
-  let active = null;
-  keys.forEach((key, i) => {
-    const start = timeToMinutes(zt[key]?.start || DEFAULT_ZONE_TIMES[key].start);
-    const end = i < keys.length-1
-      ? timeToMinutes(zt[keys[i+1]]?.start || DEFAULT_ZONE_TIMES[keys[i+1]].start) - 10
-      : 23*60;
-    if (cur >= start && cur < end) active = key;
-  });
-  return active;
-}
-
-function updateZoneTimeLabels() {
-  if (!settingsCache) return;
-  const zt = settingsCache.zoneTimes || DEFAULT_ZONE_TIMES;
-  ZONE_DEFS.forEach(z => {
-    const el = document.getElementById(`zone-time-${z.key}`);
-    if (!el) return;
-    const start = zt[z.key]?.start || DEFAULT_ZONE_TIMES[z.key].start;
-    const end = getZoneEndTime(z.key);
-    el.textContent = `${start} – ${end}`;
-  });
-}
-
-function updateActiveZone() {
-  const highlight = settingsCache ? settingsCache.highlight !== false : true;
-  const active = getActiveZone();
-  const zt = settingsCache?.zoneTimes || DEFAULT_ZONE_TIMES;
-
-  const now = new Date();
-  const cur = now.getHours()*60 + now.getMinutes();
-  const flexStart  = timeToMinutes(zt['flex']?.start  || DEFAULT_ZONE_TIMES['flex'].start);
-  const learnStart = timeToMinutes(zt['learn']?.start || DEFAULT_ZONE_TIMES['learn'].start);
-  const learnEnd   = timeToMinutes(getZoneEndTime('learn')); // last zone, defaults to 23:00
-
-  // Rest: after learning end → until anchor window (2h before flex next morning)
-  const anchorWindowStart = (flexStart - 120 + 1440) % 1440; // 2h before flex, wraps midnight
-  const restActive = highlight && active === null && (cur >= learnEnd || cur < anchorWindowStart);
-  // Anchor: from anchorWindowStart until flexStart
-  const anchorActive = highlight && active === null && cur >= anchorWindowStart && cur < flexStart;
-
-  // Update rest message text
-  const restMsg = settingsCache?.restMessage || DEFAULT_REST_MESSAGE;
-  const restEl = document.getElementById('rest-message-text');
-  if (restEl) restEl.textContent = restMsg;
-
-  // Rest block
-  const restBlock = document.getElementById('zone-block-rest');
-  const restBadge = document.getElementById('zone-now-rest');
-  if (restBlock) restBlock.classList.toggle('zone-active', restActive);
-  if (restBadge) restBadge.style.display = restActive ? 'inline-block' : 'none';
-
-  // Rest time label
-  const restLabel = document.getElementById('zone-time-rest');
-  if (restLabel) restLabel.textContent = restActive ? `${minutesToTime(learnEnd)} until ${minutesToTime(anchorWindowStart)}` : 'After Learning';
-
-  // Anchor card
-  const anchorCard = document.getElementById('anchor-card');
-  if (anchorCard) {
-    anchorCard.classList.toggle('zone-active', anchorActive);
-    // Badge inside anchor label row
-    let anchorBadge = document.getElementById('anchor-now-badge');
-    if (!anchorBadge && anchorActive) {
-      anchorBadge = document.createElement('span');
-      anchorBadge.id = 'anchor-now-badge';
-      anchorBadge.className = 'zone-now-badge';
-      anchorBadge.textContent = 'NOW';
-      const label = anchorCard.querySelector('.anchor-label');
-      if (label) label.appendChild(anchorBadge);
-    }
-    if (anchorBadge) anchorBadge.style.display = anchorActive ? 'inline-block' : 'none';
-  }
-
-  // Zone blocks
-  ZONE_DEFS.forEach(z => {
-    const block = document.getElementById(`zone-block-${z.key}`);
-    const badge = document.getElementById(`zone-now-${z.key}`);
-    if (!block || !badge) return;
-    const isActive = highlight && active === z.key;
-    block.classList.toggle('zone-active', isActive);
-    badge.style.display = isActive ? 'inline-block' : 'none';
-  });
-
-  // Zone transition
-  const newZone = restActive ? 'rest' : anchorActive ? 'anchor' : active;
-  if (newZone && newZone !== lastActiveZone && lastActiveZone !== null) {
-    const zoneLabels = { rest:'Rest', anchor:'Anchor Block', flex:'Flex Zone', wind:'Wind-Down', night:'Night Shift', learn:'Learning' };
-    const label = zoneLabels[newZone] || newZone;
-    const body = newZone === 'rest' ? restMsg : `Time to focus on ${label}. Let's go!`;
-
-    // Auto-migrate incomplete tasks from previous work zone → new work zone
-    const workZones = ['flex','wind','night','learn'];
-    if (workZones.includes(lastActiveZone) && workZones.includes(newZone)) {
-      migrateTasksOnZoneChange(lastActiveZone, newZone);
-    }
-
-    // In-app toast
-    if (settingsCache?.toastOnTransition) showToast(`${label} — ${newZone === 'rest' ? 'Good Night 🌙' : "let's go!"}`);
-
-    // Push notification (works on phone if PWA installed)
-    sendZoneNotification(`ANKYRA — ${label}`, body);
-  }
-  lastActiveZone = newZone;
-}
-
-// ── TASK AUTO-MIGRATION ON ZONE CHANGE ────────────
-async function migrateTasksOnZoneChange(fromZone, toZone) {
-  const zoneOrder = ['flex','wind','night','learn'];
-  const fi = zoneOrder.indexOf(fromZone), ti = zoneOrder.indexOf(toZone);
-  if (fi < 0 || ti <= fi) return; // only migrate forward
-  const dk = dateKey();
-  const ds = await loadDay(dk);
-  const incomplete = (ds.tasks[fromZone] || []).filter(t => !t.done);
-  if (!incomplete.length) return;
-  if (!ds.tasks[toZone]) ds.tasks[toZone] = [];
-  const existingIds = new Set(ds.tasks[toZone].map(t => t.id));
-  incomplete.forEach(t => {
-    if (!existingIds.has(t.id)) ds.tasks[toZone].push({...t, carried: true});
-    ds.tasks[fromZone] = ds.tasks[fromZone].filter(t2 => t2.id !== t.id);
-  });
-  await saveDay(dk, ds);
-  renderTasks(fromZone, ds);
-  renderTasks(toZone, ds);
-  showToast(`${incomplete.length} task${incomplete.length > 1 ? 's' : ''} moved to ${toZone === 'wind' ? 'Wind-Down' : toZone === 'night' ? 'Night Shift' : 'Learning'}`);
-}
-
-// ── INLINE EDITING ────────────────────────────────
-function inlineEditEl(el, onSave) {
-  const current = el.textContent;
-  el.innerHTML = `<input class="task-edit-input" value="${escHtml(current)}">`;
-  const input = el.querySelector('input');
-  input.focus(); input.select();
-  const save = () => { const v = input.value.trim(); if (v && v !== current) onSave(v); else el.textContent = current; };
-  input.addEventListener('blur', save);
-  input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); input.blur(); } if (e.key === 'Escape') { el.textContent = current; input.removeEventListener('blur', save); } });
-}
-
-window.editTask = async function(zone, id) {
-  const el = document.getElementById(`task-text-${zone}-${id}`);
-  if (!el) return;
-  inlineEditEl(el, async newText => {
-    const dk = dateKey();
-    const ds = await loadDay(dk);
-    const t = (ds.tasks[zone]||[]).find(t => t.id === id);
-    if (t) { t.text = newText; await saveDay(dk, ds); renderTasks(zone, ds); }
-  });
-};
-
-window.editScheduleTask = function(id) {
-  const el = document.getElementById(`sched-text-${id}`);
-  if (!el) return;
-  inlineEditEl(el, async newText => {
-    const t = scheduleCache.find(t => t.id === id);
-    if (t) { t.text = newText; await saveScheduleDoc(); renderSchedule(); }
-  });
-};
-
-window.editCapture = function(id) {
-  const el = document.getElementById(`cap-text-${id}`);
-  if (!el) return;
-  inlineEditEl(el, async newText => {
-    const dk = dateKey();
-    const ds = await loadDay(dk);
-    const c = (ds.captures||[]).find(c => c.id === id);
-    if (c) { c.text = newText; await saveDay(dk, ds); renderCaptures(ds); }
-  });
-};
-
-window.editBook = function(id) {
-  const card = document.getElementById(`book-card-${id}`);
-  if (!card) return;
-  const b = (libraryCache||[]).find(b => b.id === id);
-  if (!b) return;
-  // Check if edit row already open
-  if (card.querySelector('.book-edit-row')) { card.querySelector('.book-edit-row').remove(); return; }
-  const row = document.createElement('div');
-  row.className = 'book-edit-row';
-  row.innerHTML = `<input id="bedit-title-${id}" value="${escHtml(b.title)}" placeholder="Title"><input id="bedit-pages-${id}" type="number" value="${b.totalPages||''}" placeholder="Pages" style="max-width:90px"><button class="book-save-btn" onclick="saveBookEdit(${id})">Save</button>`;
-  card.appendChild(row);
-  card.querySelector(`#bedit-title-${id}`).focus();
-};
-
-window.saveBookEdit = async function(id) {
-  const titleEl = document.getElementById(`bedit-title-${id}`);
-  const pagesEl = document.getElementById(`bedit-pages-${id}`);
-  if (!titleEl) return;
-  const newTitle = titleEl.value.trim();
-  const newPages = parseInt(pagesEl.value) || null;
-  if (!newTitle) return;
-  const books = await loadLibrary();
-  const b = books.find(b => b.id === id);
-  if (b) { b.title = newTitle; if (newPages) b.totalPages = newPages; await saveLibrary(books); renderLibraryBooks(); showToast('Book updated ✓'); }
-};
-
-// ── UTILS ─────────────────────────────────────────
-function escHtml(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-
-function showToast(msg, isError=false) {
-  const t=document.getElementById('toast');
-  t.textContent=msg;
-  t.className='toast'+(isError?' error-toast':'');
-  t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'), 2400);
-}
-
-initFirebase();
-</script>
+      });
+      document.addEventListener("visibilitychange", () => {
+        if (!document.hidden) tick();
+      });
+
+      loadState();
+      updateView();
+      if (state.running) startTicker();
+    })();
+  </script>
 </body>
 </html>
