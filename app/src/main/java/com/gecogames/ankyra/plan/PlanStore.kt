@@ -25,6 +25,13 @@ object PlanStore {
     fun past(context: Context, today: LocalDate = LocalDate.now()): List<PlanDay> =
         all(context).filter { LocalDate.parse(it.date).isBefore(today) }
 
+    fun history(context: Context, today: LocalDate = LocalDate.now()): List<PlanDay> =
+        all(context).filter { plan ->
+            LocalDate.parse(plan.date).isBefore(today) || plan.cards.any {
+                it.status == PlanCardStatus.COMPLETED || it.status == PlanCardStatus.SKIPPED
+            }
+        }
+
     fun create(context: Context, date: LocalDate, startMinuteOfDay: Int = 9 * 60): PlanDay {
         val existing = get(context, date)
         if (existing != null) return existing
@@ -220,7 +227,12 @@ object PlanStore {
         return plan.copy(
             startMinuteOfDay = plan.startMinuteOfDay.coerceIn(0, (24 * 60) - 1),
             groups = groups,
-            cards = cards
+            cards = cards,
+            finishedAtMillis = plan.finishedAtMillis.takeUnless {
+                cards.any { card ->
+                    card.status == PlanCardStatus.PENDING || card.status == PlanCardStatus.ACTIVE
+                }
+            }
         )
     }
 
