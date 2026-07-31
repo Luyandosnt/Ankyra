@@ -14,12 +14,14 @@ import android.content.pm.ServiceInfo
 import android.graphics.Color
 import android.media.AudioAttributes
 import android.media.RingtoneManager
+import android.net.Uri
 import android.os.Build
 import android.os.IBinder
 import android.os.SystemClock
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import android.provider.Settings
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -175,7 +177,9 @@ class TimerService : Service() {
         const val EXTRA_ADD_MILLIS = "add_millis"
         const val DEFAULT_ADD_TIME_MILLIS = 5 * 60_000L
 
-        private const val TIMER_CHANNEL = "ankyra_active_timer"
+        // A new channel ID upgrades existing installations from the old low-importance
+        // channel, whose importance cannot be raised after the channel is created.
+        private const val TIMER_CHANNEL = "ankyra_live_timer_v2"
         private const val FINISHED_CHANNEL = "ankyra_finished_timer"
         private const val NOTIFICATION_ID = 4101
         private const val FINISHED_NOTIFICATION_ID = 4102
@@ -204,6 +208,26 @@ class TimerService : Service() {
                 context,
                 intent
             )
+        }
+
+        fun canPostLiveUpdates(context: Context): Boolean {
+            if (Build.VERSION.SDK_INT < 36) return true
+            return context.getSystemService(NotificationManager::class.java)
+                .canPostPromotedNotifications()
+        }
+
+        fun openLiveUpdateSettings(context: Context) {
+            if (Build.VERSION.SDK_INT < 36) return
+            val intent = Intent(Settings.ACTION_MANAGE_APP_PROMOTED_NOTIFICATIONS)
+                .setData(Uri.parse("package:${context.packageName}"))
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            runCatching { context.startActivity(intent) }.onFailure {
+                context.startActivity(
+                    Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                        .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                )
+            }
         }
 
         fun completeTimer(context: Context) {
@@ -253,38 +277,39 @@ class TimerService : Service() {
             val cancelIntent = servicePendingIntent(context, ACTION_CANCEL, 2)
             val finishIntent = servicePendingIntent(context, ACTION_FINISH_EARLY, 3)
             val skipIntent = servicePendingIntent(context, ACTION_SKIP, 4)
+            val elapsed = (snapshot.totalMillis - remaining).coerceAtLeast(0L)
+            val progressPercent = if (snapshot.totalMillis > 0L) {
+                ((elapsed * 100L) / snapshot.totalMillis).coerceIn(0L, 100L).toInt()
+            } else {
+                0
+            }
+            val progressStyle = NotificationCompat.ProgressStyle()
+                .setStyledByProgress(true)
+                .setProgress(progressPercent)
 
             val builder = NotificationCompat.Builder(context, TIMER_CHANNEL)
                 .setSmallIcon(R.drawable.ic_timer)
+                .setColor(Color.rgb(99, 91, 239))
                 .setContentTitle(snapshot.title ?: "Ankyra Timer")
                 .setContentText(
                     if (running) {
-                        if (snapshot.isPlanTimer) "Plan task in progress" else "Timer running"
+                        "${formatDuration(remaining)} remaining"
                     } else {
                         "${formatDuration(remaining)} remaining · Paused"
                     }
                 )
-                .setStyle(
-                    NotificationCompat.BigTextStyle().bigText(
-                        if (running) {
-                            if (snapshot.isPlanTimer) {
-                                "${snapshot.title.orEmpty()} · ${formatDuration(remaining)} remaining"
-                            } else {
-                                "Timer in progress. Pause or stop it without opening Ankyra."
-                            }
-                        } else {
-                            "${formatDuration(remaining)} remaining. Resume when ready."
-                        }
-                    )
-                )
+                .setSubText("${formatCompactDuration(snapshot.totalMillis)} · ends ${formatEndTime(endWallClock)}")
+                .setStyle(progressStyle)
                 .setContentIntent(openApp)
                 .setCategory(NotificationCompat.CATEGORY_STOPWATCH)
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
                 .setOngoing(true)
                 .setOnlyAlertOnce(true)
                 .setSilent(true)
-                .setPriority(NotificationCompat.PRIORITY_LOW)
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
                 .setRequestPromotedOngoing(true)
+                .setShortCriticalText(formatChipDuration(remaining))
+                .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
                 .setShowWhen(running)
                 .setWhen(if (running) endWallClock else System.currentTimeMillis())
                 .setUsesChronometer(running)
@@ -373,10 +398,10 @@ class TimerService : Service() {
 
             val timerChannel = NotificationChannel(
                 TIMER_CHANNEL,
-                context.getString(R.string.notification_channel_timer),
-                NotificationManager.IMPORTANCE_LOW
+                "Live timer",
+                NotificationManager.IMPORTANCE_DEFAULT
             ).apply {
-                description = "Shows an active Ankyra timer and its controls"
+                description = "Shows Ankyra at the top of notifications and on the lock screen"
                 setSound(null, null)
                 enableVibration(false)
                 lockscreenVisibility = Notification.VISIBILITY_PUBLIC
@@ -424,5 +449,34 @@ class TimerService : Service() {
                 String.format(Locale.getDefault(), "%02d:%02d", minutes, seconds)
             }
         }
+
+        private fun formatChipDuration(milliseconds: Long): String {
+            val totalSeconds = (milliseconds.coerceAtLeast(0L) + 999L) / 1_000L
+            val hours = totalSeconds / 3_600L
+            val minutes = (totalSeconds % 3_600L) / 60L
+            val seconds = totalSeconds % 60L
+            return if (hours >= 10L) {
+                String.format(Locale.getDefault(), "%dh%02dm", hours, minutes)
+            } else if (hours > 0L) {
+                String.format(Locale.getDefault(), "%d:%02d:%02d", hours, minutes, seconds)
+            } else {
+                String.format(Locale.getDefault(), "%02d:%02d", minutes, seconds)
+            }.take(7)
+        }
+
+        private fun formatCompactDuration(milliseconds: Long): String {
+            val totalMinutes = milliseconds.coerceAtLeast(0L) / 60_000L
+            val hours = totalMinutes / 60L
+            val minutes = totalMinutes % 60L
+            return when {
+                hours > 0L && minutes > 0L -> "${hours}h ${minutes}m"
+                hours > 0L -> "${hours}h"
+                else -> "${minutes}m"
+            }
+        }
+
+        private fun formatEndTime(epochMillis: Long): String =
+            java.text.SimpleDateFormat("HH:mm", Locale.getDefault())
+                .format(java.util.Date(epochMillis))
     }
 }
