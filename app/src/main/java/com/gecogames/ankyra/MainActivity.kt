@@ -37,12 +37,14 @@ import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -63,6 +65,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.gecogames.ankyra.plan.PlanScreen
+import com.gecogames.ankyra.plan.PlanScheduler
 import com.gecogames.ankyra.plan.PlanStore
 import com.gecogames.ankyra.timer.TimerService
 import com.gecogames.ankyra.timer.TimerSnapshot
@@ -124,24 +127,39 @@ private fun AnkyraApp() {
     }
     var pendingLaunch by remember { mutableStateOf<TimerLaunch?>(null) }
     var permissionMessage by remember { mutableStateOf<String?>(null) }
-    var liveUpdatesEnabled by remember { mutableStateOf(TimerService.canPostLiveUpdates(context)) }
+    val onboardingPreferences = remember {
+        context.getSharedPreferences("ankyra_onboarding", android.content.Context.MODE_PRIVATE)
+    }
+    var showOnboarding by remember {
+        mutableStateOf(!onboardingPreferences.getBoolean("notification_setup_complete", false))
+    }
+    var onboardingPermissionFlow by remember { mutableStateOf(false) }
 
     val notificationPermission = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
-        val launch = pendingLaunch
-        if (granted && launch != null) {
-            executeTimerLaunch(context, launch)
-            pendingLaunch = null
-        } else if (!granted) {
-            permissionMessage = "Allow notifications to use lock-screen controls and the live timer counter."
+        if (onboardingPermissionFlow) {
+            onboardingPermissionFlow = false
+            if (granted && Build.VERSION.SDK_INT >= 36 && !TimerService.canPostLiveUpdates(context)) {
+                TimerService.openLiveUpdateSettings(context)
+            } else if (!granted) {
+                permissionMessage = "Notifications are required for Plan alarms and lock-screen timers."
+            }
+        } else {
+            val launch = pendingLaunch
+            if (granted && launch != null) {
+                executeTimerLaunch(context, launch)
+                pendingLaunch = null
+            } else if (!granted) {
+                permissionMessage = "Allow notifications to use lock-screen controls and the live timer counter."
+            }
         }
     }
 
     LaunchedEffect(Unit) {
+        PlanScheduler.rescheduleAll(context)
         while (true) {
             snapshot = TimerStore.snapshot(context)
-            liveUpdatesEnabled = TimerService.canPostLiveUpdates(context)
             delay(250L)
         }
     }
@@ -177,9 +195,7 @@ private fun AnkyraApp() {
                     } else {
                         TimerSetupScreen(
                             onStart = { requestLaunch(TimerLaunch(durationMillis = it)) },
-                            message = permissionMessage,
-                            showLiveUpdateSetting = Build.VERSION.SDK_INT >= 36 && !liveUpdatesEnabled,
-                            onEnableLiveUpdates = { TimerService.openLiveUpdateSettings(context) }
+                            message = permissionMessage
                         )
                     }
                 }
@@ -192,6 +208,49 @@ private fun AnkyraApp() {
             }
         }
         PrimaryNavigation(selectedTab) { selectedTab = it }
+    }
+
+    if (showOnboarding) {
+        AlertDialog(
+            onDismissRequest = {},
+            containerColor = Color(0xFF1B1B1E),
+            title = { Text("Enable Ankyra alarms", color = Color.White) },
+            text = {
+                Text(
+                    "Ankyra needs notification access for Plan start alarms, vibration, " +
+                        "lock-screen controls and the Live Timer. This setup appears only once.",
+                    color = Muted
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onboardingPreferences.edit()
+                            .putBoolean("notification_setup_complete", true)
+                            .apply()
+                        showOnboarding = false
+                        if (
+                            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                            ContextCompat.checkSelfPermission(
+                                context,
+                                Manifest.permission.POST_NOTIFICATIONS
+                            ) != PackageManager.PERMISSION_GRANTED
+                        ) {
+                            onboardingPermissionFlow = true
+                            notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        } else if (
+                            Build.VERSION.SDK_INT >= 36 &&
+                            !TimerService.canPostLiveUpdates(context)
+                        ) {
+                            TimerService.openLiveUpdateSettings(context)
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Purple)
+                ) {
+                    Text("Continue")
+                }
+            }
+        )
     }
 }
 
@@ -213,9 +272,7 @@ private fun executeTimerLaunch(context: android.content.Context, launch: TimerLa
 @Composable
 private fun TimerSetupScreen(
     onStart: (Long) -> Unit,
-    message: String?,
-    showLiveUpdateSetting: Boolean,
-    onEnableLiveUpdates: () -> Unit
+    message: String?
 ) {
     var hours by remember { mutableIntStateOf(2) }
     var minutes by remember { mutableIntStateOf(0) }
@@ -295,17 +352,6 @@ private fun TimerSetupScreen(
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
             )
-        }
-
-        if (showLiveUpdateSetting) {
-            Button(
-                onClick = onEnableLiveUpdates,
-                colors = ButtonDefaults.buttonColors(containerColor = SurfaceGrey),
-                shape = RoundedCornerShape(24.dp),
-                modifier = Modifier.padding(bottom = 10.dp)
-            ) {
-                Text("Enable lock-screen Live Timer", color = Color.White, fontSize = 13.sp)
-            }
         }
 
         Button(
