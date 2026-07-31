@@ -201,7 +201,10 @@ object PlanStore {
     }
 
     private fun normalize(plan: PlanDay): PlanDay {
-        val groups = plan.orderedGroups().mapIndexed { index, group -> group.copy(order = index) }
+        val referencedGroupIds = plan.cards.mapNotNull { it.groupId }.toSet()
+        val groups = plan.orderedGroups()
+            .filter { it.id in referencedGroupIds }
+            .mapIndexed { index, group -> group.copy(order = index) }
         val validGroupIds = groups.map { it.id }.toSet()
         val cards = plan.orderedCards().mapIndexed { index, card ->
             card.copy(
