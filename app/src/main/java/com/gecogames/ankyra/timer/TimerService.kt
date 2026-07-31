@@ -27,6 +27,7 @@ import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import com.gecogames.ankyra.MainActivity
 import com.gecogames.ankyra.R
+import com.gecogames.ankyra.plan.PlanStore
 import java.util.Locale
 
 class TimerService : Service() {
@@ -44,7 +45,13 @@ class TimerService : Service() {
                     stopSelf()
                     return START_NOT_STICKY
                 }
-                val snapshot = TimerStore.start(this, duration)
+                val snapshot = TimerStore.start(
+                    context = this,
+                    durationMillis = duration,
+                    title = intent.getStringExtra(EXTRA_TITLE),
+                    planDate = intent.getStringExtra(EXTRA_PLAN_DATE),
+                    planCardId = intent.getStringExtra(EXTRA_PLAN_CARD_ID)
+                )
                 scheduleAlarm(this, snapshot.remainingMillis)
                 showForeground(snapshot)
             }
@@ -60,8 +67,42 @@ class TimerService : Service() {
                 showForeground(snapshot)
             }
 
+            ACTION_ADD_TIME -> {
+                cancelAlarm(this)
+                val snapshot = TimerStore.addTime(
+                    this,
+                    intent.getLongExtra(EXTRA_ADD_MILLIS, DEFAULT_ADD_TIME_MILLIS)
+                )
+                if (snapshot.status == TimerStatus.RUNNING) {
+                    scheduleAlarm(this, snapshot.remainingMillis)
+                }
+                showForeground(snapshot)
+            }
+
+            ACTION_RESTART -> {
+                cancelAlarm(this)
+                val current = TimerStore.snapshot(this)
+                PlanStore.restartCard(this, current.planDate, current.planCardId)
+                val snapshot = TimerStore.restart(this)
+                scheduleAlarm(this, snapshot.remainingMillis)
+                showForeground(snapshot)
+            }
+
+            ACTION_FINISH_EARLY -> finishCurrentPlanCard(skipped = false)
+
+            ACTION_SKIP -> finishCurrentPlanCard(skipped = true)
+
             ACTION_CANCEL -> {
                 cancelAlarm(this)
+                val current = TimerStore.snapshot(this)
+                if (current.isPlanTimer) {
+                    PlanStore.skipCard(
+                        context = this,
+                        date = current.planDate,
+                        cardId = current.planCardId,
+                        actualDurationMillis = current.elapsedMillis
+                    )
+                }
                 TimerStore.clear(this)
                 ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
                 stopSelf()
@@ -80,6 +121,29 @@ class TimerService : Service() {
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
+
+    private fun finishCurrentPlanCard(skipped: Boolean) {
+        cancelAlarm(this)
+        val current = TimerStore.snapshot(this)
+        if (skipped) {
+            PlanStore.skipCard(
+                context = this,
+                date = current.planDate,
+                cardId = current.planCardId,
+                actualDurationMillis = current.elapsedMillis
+            )
+        } else {
+            PlanStore.completeCard(
+                context = this,
+                date = current.planDate,
+                cardId = current.planCardId,
+                actualDurationMillis = current.elapsedMillis
+            )
+        }
+        TimerStore.finish(this)
+        ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
+        stopSelf()
+    }
 
     private fun showForeground(snapshot: TimerSnapshot) {
         val notification = buildOngoingNotification(this, snapshot)
@@ -100,7 +164,16 @@ class TimerService : Service() {
         const val ACTION_PAUSE = "com.gecogames.ankyra.action.PAUSE"
         const val ACTION_RESUME = "com.gecogames.ankyra.action.RESUME"
         const val ACTION_CANCEL = "com.gecogames.ankyra.action.CANCEL"
+        const val ACTION_ADD_TIME = "com.gecogames.ankyra.action.ADD_TIME"
+        const val ACTION_FINISH_EARLY = "com.gecogames.ankyra.action.FINISH_EARLY"
+        const val ACTION_SKIP = "com.gecogames.ankyra.action.SKIP"
+        const val ACTION_RESTART = "com.gecogames.ankyra.action.RESTART"
         const val EXTRA_DURATION = "duration_millis"
+        const val EXTRA_TITLE = "title"
+        const val EXTRA_PLAN_DATE = "plan_date"
+        const val EXTRA_PLAN_CARD_ID = "plan_card_id"
+        const val EXTRA_ADD_MILLIS = "add_millis"
+        const val DEFAULT_ADD_TIME_MILLIS = 5 * 60_000L
 
         private const val TIMER_CHANNEL = "ankyra_active_timer"
         private const val FINISHED_CHANNEL = "ankyra_finished_timer"
@@ -108,23 +181,41 @@ class TimerService : Service() {
         private const val FINISHED_NOTIFICATION_ID = 4102
         private const val ALARM_REQUEST_CODE = 4201
 
-        fun start(context: Context, durationMillis: Long) {
+        fun start(
+            context: Context,
+            durationMillis: Long,
+            title: String? = null,
+            planDate: String? = null,
+            planCardId: String? = null
+        ) {
             val intent = Intent(context, TimerService::class.java)
                 .setAction(ACTION_START)
                 .putExtra(EXTRA_DURATION, durationMillis)
+                .putExtra(EXTRA_TITLE, title)
+                .putExtra(EXTRA_PLAN_DATE, planDate)
+                .putExtra(EXTRA_PLAN_CARD_ID, planCardId)
             ContextCompat.startForegroundService(context, intent)
         }
 
-        fun sendAction(context: Context, action: String) {
+        fun sendAction(context: Context, action: String, addMillis: Long? = null) {
+            val intent = Intent(context, TimerService::class.java).setAction(action)
+            if (addMillis != null) intent.putExtra(EXTRA_ADD_MILLIS, addMillis)
             ContextCompat.startForegroundService(
                 context,
-                Intent(context, TimerService::class.java).setAction(action)
+                intent
             )
         }
 
         fun completeTimer(context: Context) {
             createChannels(context)
             cancelAlarm(context)
+            val snapshot = TimerStore.snapshot(context)
+            PlanStore.completeCard(
+                context = context,
+                date = snapshot.planDate,
+                cardId = snapshot.planCardId,
+                actualDurationMillis = snapshot.elapsedMillis
+            )
             TimerStore.finish(context)
             context.stopService(Intent(context, TimerService::class.java))
 
@@ -135,7 +226,7 @@ class TimerService : Service() {
             ) {
                 NotificationManagerCompat.from(context).notify(
                     FINISHED_NOTIFICATION_ID,
-                    buildFinishedNotification(context)
+                    buildFinishedNotification(context, snapshot.title)
                 )
             }
             vibrate(context)
@@ -160,15 +251,27 @@ class TimerService : Service() {
             val toggleIcon = if (running) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play
             val toggleIntent = servicePendingIntent(context, toggleAction, 1)
             val cancelIntent = servicePendingIntent(context, ACTION_CANCEL, 2)
+            val finishIntent = servicePendingIntent(context, ACTION_FINISH_EARLY, 3)
+            val skipIntent = servicePendingIntent(context, ACTION_SKIP, 4)
 
-            return NotificationCompat.Builder(context, TIMER_CHANNEL)
+            val builder = NotificationCompat.Builder(context, TIMER_CHANNEL)
                 .setSmallIcon(R.drawable.ic_timer)
-                .setContentTitle("Ankyra Timer")
-                .setContentText(if (running) "Timer running" else "${formatDuration(remaining)} remaining · Paused")
+                .setContentTitle(snapshot.title ?: "Ankyra Timer")
+                .setContentText(
+                    if (running) {
+                        if (snapshot.isPlanTimer) "Plan task in progress" else "Timer running"
+                    } else {
+                        "${formatDuration(remaining)} remaining · Paused"
+                    }
+                )
                 .setStyle(
                     NotificationCompat.BigTextStyle().bigText(
                         if (running) {
-                            "Timer in progress. Pause or stop it without opening Ankyra."
+                            if (snapshot.isPlanTimer) {
+                                "${snapshot.title.orEmpty()} · ${formatDuration(remaining)} remaining"
+                            } else {
+                                "Timer in progress. Pause or stop it without opening Ankyra."
+                            }
                         } else {
                             "${formatDuration(remaining)} remaining. Resume when ready."
                         }
@@ -192,11 +295,21 @@ class TimerService : Service() {
                     false
                 )
                 .addAction(toggleIcon, toggleTitle, toggleIntent)
-                .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Stop", cancelIntent)
-                .build()
+            if (snapshot.isPlanTimer) {
+                builder
+                    .addAction(android.R.drawable.checkbox_on_background, "Finish", finishIntent)
+                    .addAction(android.R.drawable.ic_media_next, "Skip", skipIntent)
+            } else {
+                builder.addAction(
+                    android.R.drawable.ic_menu_close_clear_cancel,
+                    "Stop",
+                    cancelIntent
+                )
+            }
+            return builder.build()
         }
 
-        private fun buildFinishedNotification(context: Context): Notification {
+        private fun buildFinishedNotification(context: Context, title: String?): Notification {
             val openApp = PendingIntent.getActivity(
                 context,
                 0,
@@ -205,8 +318,14 @@ class TimerService : Service() {
             )
             return NotificationCompat.Builder(context, FINISHED_CHANNEL)
                 .setSmallIcon(R.drawable.ic_timer)
-                .setContentTitle("Timer complete")
-                .setContentText("Your Ankyra timer has finished.")
+                .setContentTitle(if (title != null) "Completed: $title" else "Timer complete")
+                .setContentText(
+                    if (title != null) {
+                        "Open Ankyra to start the next plan card."
+                    } else {
+                        "Your Ankyra timer has finished."
+                    }
+                )
                 .setContentIntent(openApp)
                 .setCategory(NotificationCompat.CATEGORY_ALARM)
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
