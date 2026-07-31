@@ -165,7 +165,7 @@ fun PlanScreen(
             plan = plan,
             card = editingCard,
             onDismiss = { showCardEditor = false },
-            onSave = { goal, durationMinutes, notes, groupName ->
+            onSave = { goal, durationMinutes, notes, groupName, firstCardStartMinute ->
                 var groups = plan.groups
                 val cleanGroup = groupName.trim()
                 val groupId = if (cleanGroup.isBlank()) {
@@ -202,7 +202,14 @@ fun PlanScreen(
                         }
                     }
                 }
-                PlanStore.save(context, plan.copy(groups = groups, cards = updatedCards))
+                PlanStore.save(
+                    context,
+                    plan.copy(
+                        startMinuteOfDay = firstCardStartMinute ?: plan.startMinuteOfDay,
+                        groups = groups,
+                        cards = updatedCards
+                    )
+                )
                 showCardEditor = false
                 refresh()
             }
@@ -275,7 +282,6 @@ private fun PlanDetail(
     onOpenTimer: () -> Unit,
     onDuplicate: () -> Unit
 ) {
-    val context = LocalContext.current
     val scheduled = plan.scheduledCards()
     val summary = plan.summary()
     val activeCard = plan.cards.firstOrNull { it.status == PlanCardStatus.ACTIVE }
@@ -290,82 +296,25 @@ private fun PlanDetail(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        item {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = PlanSurface),
-                shape = RoundedCornerShape(20.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(Modifier.padding(16.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column {
-                            Text("Start", color = PlanMuted, fontSize = 12.sp)
-                            Text(formatMinuteOfDay(plan.startMinuteOfDay), color = Color.White, fontSize = 20.sp)
-                        }
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("Planned", color = PlanMuted, fontSize = 12.sp)
-                            Text(formatDuration(summary.plannedMillis), color = Color.White, fontSize = 20.sp)
-                        }
-                        Column(horizontalAlignment = Alignment.End) {
-                            Text("Expected finish", color = PlanMuted, fontSize = 12.sp)
-                            Text(
-                                formatClock(plan.expectedFinishMillis()),
-                                color = Color.White,
-                                fontSize = 20.sp
-                            )
-                        }
-                    }
-                    if (!readOnly && plan.startedAtMillis == null) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            TextButton(
-                                onClick = {
-                                    TimePickerDialog(
-                                        context,
-                                        { _, hour, minute ->
-                                            onSave(plan.copy(startMinuteOfDay = hour * 60 + minute))
-                                        },
-                                        plan.startMinuteOfDay / 60,
-                                        plan.startMinuteOfDay % 60,
-                                        true
-                                    ).show()
-                                }
-                            ) {
-                                Text("Change start", color = PlanPurple)
-                            }
-                            TextButton(
-                                onClick = {
-                                    val lastPending = plan.orderedCards().lastOrNull {
-                                        it.status == PlanCardStatus.PENDING
-                                    }
-                                    if (lastPending == null) onAddCard() else onEditCard(lastPending)
-                                }
-                            ) {
-                                Text(
-                                    if (plan.cards.isEmpty()) "Set planned time" else "Edit duration",
-                                    color = PlanPurple
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        if (plan.groups.isNotEmpty()) {
+        if (plan.cards.isNotEmpty()) {
             item {
-                GroupTotals(
-                    plan = plan,
-                    readOnly = readOnly,
-                    onMove = { groupId, direction ->
-                        onSave(moveGroup(plan, groupId, direction))
-                    }
-                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 4.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        "Starts ${formatMinuteOfDay(plan.startMinuteOfDay)}",
+                        color = PlanMuted,
+                        fontSize = 13.sp
+                    )
+                    Text(
+                        "${formatDuration(summary.plannedMillis)} planned · ends ${formatClock(plan.expectedFinishMillis())}",
+                        color = PlanMuted,
+                        fontSize = 13.sp
+                    )
+                }
             }
         }
 
@@ -381,6 +330,18 @@ private fun PlanDetail(
                     onSave(plan.copy(cards = plan.cards.filterNot { it.id == scheduledCard.card.id }))
                 }
             )
+        }
+
+        if (plan.groups.any { group -> plan.cards.any { it.groupId == group.id } }) {
+            item {
+                GroupTotals(
+                    plan = plan,
+                    readOnly = readOnly,
+                    onMove = { groupId, direction ->
+                        onSave(moveGroup(plan, groupId, direction))
+                    }
+                )
+            }
         }
 
         if (!readOnly && !terminal) {
@@ -498,7 +459,10 @@ private fun PlanCardView(
         shape = RoundedCornerShape(18.dp),
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(enabled = !readOnly, onClick = onEdit)
+            .clickable(
+                enabled = !readOnly && card.status == PlanCardStatus.PENDING,
+                onClick = onEdit
+            )
     ) {
         Column(Modifier.padding(16.dp)) {
             Row(
@@ -641,8 +605,12 @@ private fun CardEditorDialog(
     plan: PlanDay,
     card: PlanCard?,
     onDismiss: () -> Unit,
-    onSave: (String, Long, String, String) -> Unit
+    onSave: (String, Long, String, String, Int?) -> Unit
 ) {
+    val context = LocalContext.current
+    val firstCard = plan.orderedCards().firstOrNull()
+    val controlsPlanStart = plan.startedAtMillis == null &&
+        (plan.cards.isEmpty() || firstCard?.id == card?.id)
     var goal by remember(card?.id) { mutableStateOf(card?.goal.orEmpty()) }
     val initialMinutes = (card?.plannedDurationMillis ?: 30 * 60_000L) / 60_000L
     var hours by remember(card?.id) { mutableStateOf((initialMinutes / 60L).toString()) }
@@ -651,6 +619,7 @@ private fun CardEditorDialog(
     var group by remember(card?.id) {
         mutableStateOf(plan.groups.firstOrNull { it.id == card?.groupId }?.name.orEmpty())
     }
+    var startMinute by remember(card?.id) { mutableStateOf(plan.startMinuteOfDay) }
     val duration = (hours.toLongOrNull() ?: 0L) * 60L + (minutes.toLongOrNull() ?: 0L)
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -664,6 +633,36 @@ private fun CardEditorDialog(
                     label = { Text("Goal") },
                     singleLine = true
                 )
+                if (controlsPlanStart) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text("Start time", color = PlanMuted, fontSize = 12.sp)
+                            Text(
+                                formatMinuteOfDay(startMinute),
+                                color = Color.White,
+                                fontSize = 22.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                        OutlinedButton(
+                            onClick = {
+                                TimePickerDialog(
+                                    context,
+                                    { _, hour, minute -> startMinute = hour * 60 + minute },
+                                    startMinute / 60,
+                                    startMinute % 60,
+                                    true
+                                ).show()
+                            }
+                        ) {
+                            Text("Change", color = Color.White)
+                        }
+                    }
+                }
                 Text("Duration", color = Color.White, fontWeight = FontWeight.SemiBold)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
@@ -714,11 +713,24 @@ private fun CardEditorDialog(
                     label = { Text("Notes (optional)") },
                     minLines = 2
                 )
+                Text(
+                    "An alarm and vibration will play when this card finishes.",
+                    color = PlanMuted,
+                    fontSize = 12.sp
+                )
             }
         },
         confirmButton = {
             Button(
-                onClick = { onSave(goal, duration, notes, group) },
+                onClick = {
+                    onSave(
+                        goal,
+                        duration,
+                        notes,
+                        group,
+                        startMinute.takeIf { controlsPlanStart }
+                    )
+                },
                 enabled = goal.isNotBlank() && duration > 0L,
                 colors = ButtonDefaults.buttonColors(containerColor = PlanPurple)
             ) {
