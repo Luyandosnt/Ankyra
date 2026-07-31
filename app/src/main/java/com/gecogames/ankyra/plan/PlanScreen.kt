@@ -118,11 +118,7 @@ fun PlanScreen(
 
         if (showHistory) {
             HistoryList(
-                plans = remember(revision) { PlanStore.past(context) },
-                onSelect = {
-                    selectedDate = LocalDate.parse(it.date)
-                    showHistory = false
-                }
+                plans = remember(revision) { PlanStore.history(context) }
             )
         } else {
             DateNavigation(
@@ -294,20 +290,20 @@ private fun PlanDetail(
     onDuplicate: () -> Unit
 ) {
     val scheduled = plan.scheduledCards()
-    val summary = plan.summary()
+    val queue = scheduled.filter {
+        it.card.status == PlanCardStatus.PENDING || it.card.status == PlanCardStatus.ACTIVE
+    }
+    val queueCards = queue.map { it.card }
     val activeCard = plan.cards.firstOrNull { it.status == PlanCardStatus.ACTIVE }
     val planTimerRunning = timerSnapshot.isPlanTimer &&
         timerSnapshot.planDate == plan.date &&
         (timerSnapshot.status == TimerStatus.RUNNING || timerSnapshot.status == TimerStatus.PAUSED)
-    val terminal = plan.cards.isNotEmpty() && plan.cards.all {
-        it.status == PlanCardStatus.COMPLETED || it.status == PlanCardStatus.SKIPPED
-    }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        if (plan.cards.isNotEmpty()) {
+        if (queue.isNotEmpty()) {
             item {
                 Row(
                     modifier = Modifier
@@ -321,7 +317,7 @@ private fun PlanDetail(
                         fontSize = 13.sp
                     )
                     Text(
-                        "${formatDuration(summary.plannedMillis)} planned · ends ${formatClock(plan.expectedFinishMillis())}",
+                        "${formatDuration(queueCards.sumOf { it.plannedDurationMillis })} remaining · ends ${formatClock(queue.last().adjustedEndMillis)}",
                         color = PlanMuted,
                         fontSize = 13.sp
                     )
@@ -329,7 +325,7 @@ private fun PlanDetail(
             }
         }
 
-        items(scheduled, key = { it.card.id }) { scheduledCard ->
+        items(queue, key = { it.card.id }) { scheduledCard ->
             PlanCardView(
                 scheduled = scheduledCard,
                 groupName = plan.groups.firstOrNull { it.id == scheduledCard.card.groupId }?.name,
@@ -343,10 +339,11 @@ private fun PlanDetail(
             )
         }
 
-        if (plan.groups.any { group -> plan.cards.any { it.groupId == group.id } }) {
+        if (plan.groups.any { group -> queueCards.any { it.groupId == group.id } }) {
             item {
                 GroupTotals(
                     plan = plan,
+                    cards = queueCards,
                     readOnly = readOnly,
                     onMove = { groupId, direction ->
                         onSave(moveGroup(plan, groupId, direction))
@@ -355,7 +352,7 @@ private fun PlanDetail(
             }
         }
 
-        if (!readOnly && !terminal) {
+        if (!readOnly) {
             item {
                 OutlinedButton(
                     onClick = onAddCard,
@@ -367,15 +364,19 @@ private fun PlanDetail(
             }
         }
 
-        if (terminal || readOnly) {
+        if (!readOnly && queue.isEmpty() && plan.cards.isNotEmpty()) {
             item {
-                DailySummary(summary)
+                Text(
+                    "All cards complete · Add another card or open History.",
+                    color = PlanMuted,
+                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp)
+                )
             }
         }
 
         item {
             Column {
-                if (!readOnly && plan.cards.isNotEmpty() && !terminal) {
+                if (!readOnly && queue.isNotEmpty()) {
                     Button(
                         onClick = if (planTimerRunning) onOpenTimer else onStartPlan,
                         modifier = Modifier
@@ -410,6 +411,7 @@ private fun PlanDetail(
 @Composable
 private fun GroupTotals(
     plan: PlanDay,
+    cards: List<PlanCard>,
     readOnly: Boolean,
     onMove: (String, Int) -> Unit
 ) {
@@ -421,7 +423,7 @@ private fun GroupTotals(
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text("GROUPS", color = PlanMuted, fontSize = 11.sp, letterSpacing = 1.4.sp)
             plan.orderedGroups().forEach { group ->
-                val total = plan.cards.filter { it.groupId == group.id }.sumOf { it.plannedDurationMillis }
+                val total = cards.filter { it.groupId == group.id }.sumOf { it.plannedDurationMillis }
                 if (total > 0L) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -570,7 +572,8 @@ private fun SummaryRow(label: String, value: String) {
 }
 
 @Composable
-private fun HistoryList(plans: List<PlanDay>, onSelect: (PlanDay) -> Unit) {
+private fun HistoryList(plans: List<PlanDay>) {
+    var expandedDate by remember { mutableStateOf<String?>(null) }
     if (plans.isEmpty()) {
         Column(
             modifier = Modifier.fillMaxSize(),
@@ -585,16 +588,24 @@ private fun HistoryList(plans: List<PlanDay>, onSelect: (PlanDay) -> Unit) {
     LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         items(plans, key = { it.date }) { plan ->
             val summary = plan.summary()
+            val planDate = LocalDate.parse(plan.date)
+            val historicalCards = plan.scheduledCards().filter {
+                planDate.isBefore(LocalDate.now()) ||
+                    it.card.status == PlanCardStatus.COMPLETED ||
+                    it.card.status == PlanCardStatus.SKIPPED
+            }
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { onSelect(plan) },
+                    .clickable {
+                        expandedDate = if (expandedDate == plan.date) null else plan.date
+                    },
                 colors = CardDefaults.cardColors(containerColor = PlanSurface),
                 shape = RoundedCornerShape(18.dp)
             ) {
                 Column(Modifier.padding(16.dp)) {
                     Text(
-                        LocalDate.parse(plan.date).format(
+                        if (planDate == LocalDate.now()) "TODAY" else planDate.format(
                             DateTimeFormatter.ofPattern("dd MMM").withLocale(Locale.getDefault())
                         ).uppercase(Locale.getDefault()),
                         color = Color.White,
@@ -605,8 +616,67 @@ private fun HistoryList(plans: List<PlanDay>, onSelect: (PlanDay) -> Unit) {
                     Text("Planned: ${formatDuration(summary.plannedMillis)}", color = PlanMuted)
                     Text("Executed: ${formatDuration(summary.executedMillis)}", color = PlanMuted)
                     Text("${summary.completed}/${summary.total} cards completed", color = PlanGreen)
+                    if (expandedDate == plan.date) {
+                        Spacer(Modifier.height(14.dp))
+                        HorizontalDivider(color = PlanSurfaceRaised)
+                        Spacer(Modifier.height(10.dp))
+                        historicalCards.forEach { scheduledCard ->
+                            HistoryCard(
+                                scheduled = scheduledCard,
+                                groupName = plan.groups.firstOrNull {
+                                    it.id == scheduledCard.card.groupId
+                                }?.name
+                            )
+                            Spacer(Modifier.height(10.dp))
+                        }
+                        DailySummary(summary)
+                    } else {
+                        Spacer(Modifier.height(8.dp))
+                        Text("Tap to view completed cards", color = PlanPurple, fontSize = 12.sp)
+                    }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun HistoryCard(scheduled: ScheduledPlanCard, groupName: String?) {
+    val card = scheduled.card
+    val statusColor = if (card.status == PlanCardStatus.COMPLETED) PlanGreen else PlanOrange
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(PlanSurfaceRaised, RoundedCornerShape(14.dp))
+            .padding(14.dp)
+    ) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(card.goal, color = Color.White, fontWeight = FontWeight.SemiBold)
+            Text(
+                card.status.name.lowercase().replaceFirstChar(Char::uppercase),
+                color = statusColor,
+                fontSize = 11.sp
+            )
+        }
+        if (groupName != null) {
+            Text(groupName, color = PlanPurple, fontSize = 11.sp)
+        }
+        Spacer(Modifier.height(5.dp))
+        Text(
+            "Planned ${formatClock(scheduled.plannedStartMillis)}–${formatClock(scheduled.plannedEndMillis)} · ${formatDuration(card.plannedDurationMillis)}",
+            color = PlanMuted,
+            fontSize = 12.sp
+        )
+        if (card.actualStartMillis != null || card.actualFinishMillis != null) {
+            Text(
+                "Actual ${card.actualStartMillis?.let(::formatClock) ?: "—"}–${card.actualFinishMillis?.let(::formatClock) ?: "—"} · ${formatDuration(card.actualDurationMillis ?: 0L)}",
+                color = statusColor,
+                fontSize = 12.sp
+            )
+        }
+        if (card.notes.isNotBlank()) {
+            Spacer(Modifier.height(4.dp))
+            Text(card.notes, color = PlanMuted, fontSize = 12.sp)
         }
     }
 }
