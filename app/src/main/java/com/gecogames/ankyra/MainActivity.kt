@@ -32,13 +32,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.HourglassBottom
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.outlined.AccessAlarm
-import androidx.compose.material.icons.outlined.Language
-import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -59,13 +55,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import com.gecogames.ankyra.plan.PlanScreen
+import com.gecogames.ankyra.plan.PlanStore
 import com.gecogames.ankyra.timer.TimerService
 import com.gecogames.ankyra.timer.TimerSnapshot
 import com.gecogames.ankyra.timer.TimerStatus
@@ -78,6 +75,16 @@ private val Black = Color(0xFF000000)
 private val SurfaceGrey = Color(0xFF2D2D30)
 private val Muted = Color(0xFF929298)
 private val Purple = Color(0xFF635BEF)
+
+private enum class AppTab {
+    TIMER,
+    PLAN
+}
+
+private data class TimerLaunch(
+    val durationMillis: Long? = null,
+    val planDate: String? = null
+)
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -97,15 +104,22 @@ class MainActivity : ComponentActivity() {
 private fun AnkyraApp() {
     val context = LocalContext.current
     var snapshot by remember { mutableStateOf(TimerStore.snapshot(context)) }
-    var pendingDuration by remember { mutableLongStateOf(0L) }
+    var selectedTab by remember {
+        mutableStateOf(
+            if (snapshot.isPlanTimer && snapshot.status != TimerStatus.IDLE) AppTab.PLAN
+            else AppTab.TIMER
+        )
+    }
+    var pendingLaunch by remember { mutableStateOf<TimerLaunch?>(null) }
     var permissionMessage by remember { mutableStateOf<String?>(null) }
 
     val notificationPermission = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
-        if (granted && pendingDuration > 0L) {
-            TimerService.start(context, pendingDuration)
-            pendingDuration = 0L
+        val launch = pendingLaunch
+        if (granted && launch != null) {
+            executeTimerLaunch(context, launch)
+            pendingLaunch = null
         } else if (!granted) {
             permissionMessage = "Allow notifications to use lock-screen controls and the live timer counter."
         }
@@ -118,26 +132,65 @@ private fun AnkyraApp() {
         }
     }
 
-    val startTimer: (Long) -> Unit = { duration ->
+    val requestLaunch: (TimerLaunch) -> Unit = { launch ->
         if (
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
             PackageManager.PERMISSION_GRANTED
         ) {
-            pendingDuration = duration
+            pendingLaunch = launch
             notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
         } else {
-            TimerService.start(context, duration)
+            executeTimerLaunch(context, launch)
         }
     }
 
-    if (snapshot.status == TimerStatus.RUNNING || snapshot.status == TimerStatus.PAUSED) {
-        RunningTimerScreen(snapshot)
-    } else {
-        TimerSetupScreen(
-            onStart = startTimer,
-            message = permissionMessage
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Black)
+            .statusBarsPadding()
+            .navigationBarsPadding()
+    ) {
+        Box(modifier = Modifier.weight(1f)) {
+            when (selectedTab) {
+                AppTab.TIMER -> {
+                    if (
+                        snapshot.status == TimerStatus.RUNNING ||
+                        snapshot.status == TimerStatus.PAUSED
+                    ) {
+                        RunningTimerScreen(snapshot)
+                    } else {
+                        TimerSetupScreen(
+                            onStart = { requestLaunch(TimerLaunch(durationMillis = it)) },
+                            message = permissionMessage
+                        )
+                    }
+                }
+
+                AppTab.PLAN -> PlanScreen(
+                    timerSnapshot = snapshot,
+                    onStartPlan = { requestLaunch(TimerLaunch(planDate = it)) },
+                    onOpenTimer = { selectedTab = AppTab.TIMER }
+                )
+            }
+        }
+        PrimaryNavigation(selectedTab) { selectedTab = it }
+    }
+}
+
+private fun executeTimerLaunch(context: android.content.Context, launch: TimerLaunch) {
+    if (launch.planDate != null) {
+        val card = PlanStore.startNextCard(context, launch.planDate) ?: return
+        TimerService.start(
+            context = context,
+            durationMillis = card.plannedDurationMillis,
+            title = card.goal,
+            planDate = launch.planDate,
+            planCardId = card.id
         )
+    } else {
+        launch.durationMillis?.let { TimerService.start(context, it) }
     }
 }
 
@@ -154,8 +207,6 @@ private fun TimerSetupScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(Black)
-            .statusBarsPadding()
-            .navigationBarsPadding()
             .padding(horizontal = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -242,8 +293,7 @@ private fun TimerSetupScreen(
             Text("Start", fontSize = 20.sp, fontWeight = FontWeight.Bold)
         }
 
-        Spacer(Modifier.height(72.dp))
-        BottomNavigation()
+        Spacer(Modifier.height(30.dp))
     }
 }
 
@@ -356,8 +406,6 @@ private fun RunningTimerScreen(snapshot: TimerSnapshot) {
         modifier = Modifier
             .fillMaxSize()
             .background(Black)
-            .statusBarsPadding()
-            .navigationBarsPadding()
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -389,6 +437,17 @@ private fun RunningTimerScreen(snapshot: TimerSnapshot) {
                 strokeWidth = 12.dp
             )
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                if (snapshot.title != null) {
+                    Text(
+                        snapshot.title,
+                        color = Color.White,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 36.dp)
+                    )
+                    Spacer(Modifier.height(12.dp))
+                }
                 Text(
                     TimerService.formatDuration(snapshot.remainingMillis),
                     color = Color.White,
@@ -396,82 +455,148 @@ private fun RunningTimerScreen(snapshot: TimerSnapshot) {
                     fontWeight = FontWeight.Normal
                 )
                 Spacer(Modifier.height(12.dp))
-                Text(
-                    if (running) "Timer running" else "Paused",
-                    color = Muted,
-                    fontSize = 16.sp
-                )
+                if (snapshot.isPlanTimer) {
+                    Text(
+                        "of ${TimerService.formatDuration(snapshot.totalMillis)}",
+                        color = Muted,
+                        fontSize = 16.sp
+                    )
+                } else {
+                    Text(
+                        if (running) "Timer running" else "Paused",
+                        color = Muted,
+                        fontSize = 16.sp
+                    )
+                }
             }
         }
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            Button(
-                onClick = { TimerService.sendAction(context, TimerService.ACTION_CANCEL) },
-                colors = ButtonDefaults.buttonColors(containerColor = SurfaceGrey),
-                shape = RoundedCornerShape(40.dp),
-                modifier = Modifier
-                    .weight(1f)
-                    .height(64.dp)
+        if (snapshot.isPlanTimer) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Icon(Icons.Default.Delete, contentDescription = null)
-                Spacer(Modifier.size(8.dp))
-                Text("Delete")
-            }
-            Button(
-                onClick = {
+                TimerActionButton(
+                    label = if (running) "Pause" else "Resume",
+                    primary = true,
+                    modifier = Modifier.weight(1f)
+                ) {
                     TimerService.sendAction(
                         context,
                         if (running) TimerService.ACTION_PAUSE else TimerService.ACTION_RESUME
                     )
-                },
-                colors = ButtonDefaults.buttonColors(containerColor = Purple),
-                shape = RoundedCornerShape(40.dp),
-                modifier = Modifier
-                    .weight(1f)
-                    .height(64.dp)
+                }
+                TimerActionButton("Finish early", modifier = Modifier.weight(1f)) {
+                    TimerService.sendAction(context, TimerService.ACTION_FINISH_EARLY)
+                }
+            }
+            Spacer(Modifier.height(10.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Icon(
-                    if (running) Icons.Default.Pause else Icons.Default.PlayArrow,
-                    contentDescription = null
-                )
-                Spacer(Modifier.size(8.dp))
-                Text(if (running) "Pause" else "Resume")
+                TimerActionButton("+5 min", compact = true, modifier = Modifier.weight(1f)) {
+                    TimerService.sendAction(
+                        context,
+                        TimerService.ACTION_ADD_TIME,
+                        TimerService.DEFAULT_ADD_TIME_MILLIS
+                    )
+                }
+                TimerActionButton("Restart", compact = true, modifier = Modifier.weight(1f)) {
+                    TimerService.sendAction(context, TimerService.ACTION_RESTART)
+                }
+                TimerActionButton("Skip", compact = true, modifier = Modifier.weight(1f)) {
+                    TimerService.sendAction(context, TimerService.ACTION_SKIP)
+                }
+            }
+        } else {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Button(
+                    onClick = { TimerService.sendAction(context, TimerService.ACTION_CANCEL) },
+                    colors = ButtonDefaults.buttonColors(containerColor = SurfaceGrey),
+                    shape = RoundedCornerShape(40.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(64.dp)
+                ) {
+                    Icon(Icons.Default.Delete, contentDescription = null)
+                    Spacer(Modifier.size(8.dp))
+                    Text("Delete")
+                }
+                Button(
+                    onClick = {
+                        TimerService.sendAction(
+                            context,
+                            if (running) TimerService.ACTION_PAUSE else TimerService.ACTION_RESUME
+                        )
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Purple),
+                    shape = RoundedCornerShape(40.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(64.dp)
+                ) {
+                    Icon(
+                        if (running) Icons.Default.Pause else Icons.Default.PlayArrow,
+                        contentDescription = null
+                    )
+                    Spacer(Modifier.size(8.dp))
+                    Text(if (running) "Pause" else "Resume")
+                }
             }
         }
     }
 }
 
 @Composable
-private fun BottomNavigation() {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceAround
+private fun TimerActionButton(
+    label: String,
+    primary: Boolean = false,
+    compact: Boolean = false,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Button(
+        onClick = onClick,
+        colors = ButtonDefaults.buttonColors(containerColor = if (primary) Purple else SurfaceGrey),
+        shape = RoundedCornerShape(32.dp),
+        modifier = modifier.height(if (compact) 48.dp else 60.dp)
     ) {
-        BottomItem(Icons.Outlined.AccessAlarm, "Alarm", false)
-        BottomItem(Icons.Outlined.Language, "World clock", false)
-        BottomItem(Icons.Outlined.Timer, "Stopwatch", false)
-        BottomItem(Icons.Default.HourglassBottom, "Timer", true)
+        Text(label, fontSize = if (compact) 12.sp else 15.sp)
     }
 }
 
 @Composable
-private fun BottomItem(icon: ImageVector, label: String, selected: Boolean) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Icon(
-            icon,
-            contentDescription = label,
-            tint = if (selected) Color.White else Muted,
-            modifier = Modifier.size(28.dp)
-        )
-        Spacer(Modifier.height(4.dp))
-        Text(
-            label,
-            color = if (selected) Color.White else Muted,
-            fontSize = 11.sp,
-            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
-        )
+private fun PrimaryNavigation(selected: AppTab, onSelected: (AppTab) -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color(0xFF111113))
+            .padding(horizontal = 24.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        AppTab.entries.forEach { tab ->
+            val active = tab == selected
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .background(
+                        if (active) Purple else Color.Transparent,
+                        RoundedCornerShape(24.dp)
+                    )
+                    .clickable { onSelected(tab) }
+                    .padding(vertical = 12.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    if (tab == AppTab.TIMER) "Timer" else "Plan",
+                    color = if (active) Color.White else Muted,
+                    fontWeight = if (active) FontWeight.Bold else FontWeight.Normal
+                )
+            }
+        }
     }
 }
