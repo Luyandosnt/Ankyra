@@ -319,20 +319,38 @@ private fun PlanDetail(
                         }
                     }
                     if (!readOnly && plan.startedAtMillis == null) {
-                        TextButton(
-                            onClick = {
-                                TimePickerDialog(
-                                    context,
-                                    { _, hour, minute ->
-                                        onSave(plan.copy(startMinuteOfDay = hour * 60 + minute))
-                                    },
-                                    plan.startMinuteOfDay / 60,
-                                    plan.startMinuteOfDay % 60,
-                                    true
-                                ).show()
-                            }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text("Change start time", color = PlanPurple)
+                            TextButton(
+                                onClick = {
+                                    TimePickerDialog(
+                                        context,
+                                        { _, hour, minute ->
+                                            onSave(plan.copy(startMinuteOfDay = hour * 60 + minute))
+                                        },
+                                        plan.startMinuteOfDay / 60,
+                                        plan.startMinuteOfDay % 60,
+                                        true
+                                    ).show()
+                                }
+                            ) {
+                                Text("Change start", color = PlanPurple)
+                            }
+                            TextButton(
+                                onClick = {
+                                    val lastPending = plan.orderedCards().lastOrNull {
+                                        it.status == PlanCardStatus.PENDING
+                                    }
+                                    if (lastPending == null) onAddCard() else onEditCard(lastPending)
+                                }
+                            ) {
+                                Text(
+                                    if (plan.cards.isEmpty()) "Set planned time" else "Edit duration",
+                                    color = PlanPurple
+                                )
+                            }
                         }
                     }
                 }
@@ -533,6 +551,8 @@ private fun PlanCardView(
                 }
             }
             if (!readOnly && card.status == PlanCardStatus.PENDING) {
+                Spacer(Modifier.height(6.dp))
+                Text("Tap card to edit goal, hours or minutes", color = PlanMuted, fontSize = 11.sp)
                 Spacer(Modifier.height(8.dp))
                 HorizontalDivider(color = PlanSurfaceRaised)
                 Row(
@@ -624,14 +644,14 @@ private fun CardEditorDialog(
     onSave: (String, Long, String, String) -> Unit
 ) {
     var goal by remember(card?.id) { mutableStateOf(card?.goal.orEmpty()) }
-    var minutes by remember(card?.id) {
-        mutableStateOf(((card?.plannedDurationMillis ?: 30 * 60_000L) / 60_000L).toString())
-    }
+    val initialMinutes = (card?.plannedDurationMillis ?: 30 * 60_000L) / 60_000L
+    var hours by remember(card?.id) { mutableStateOf((initialMinutes / 60L).toString()) }
+    var minutes by remember(card?.id) { mutableStateOf((initialMinutes % 60L).toString()) }
     var notes by remember(card?.id) { mutableStateOf(card?.notes.orEmpty()) }
     var group by remember(card?.id) {
         mutableStateOf(plan.groups.firstOrNull { it.id == card?.groupId }?.name.orEmpty())
     }
-    val duration = minutes.toLongOrNull() ?: 0L
+    val duration = (hours.toLongOrNull() ?: 0L) * 60L + (minutes.toLongOrNull() ?: 0L)
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = PlanSurface,
@@ -644,13 +664,44 @@ private fun CardEditorDialog(
                     label = { Text("Goal") },
                     singleLine = true
                 )
-                OutlinedTextField(
-                    value = minutes,
-                    onValueChange = { minutes = it.filter(Char::isDigit) },
-                    label = { Text("Duration in minutes") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true
-                )
+                Text("Duration", color = Color.White, fontWeight = FontWeight.SemiBold)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = hours,
+                        onValueChange = { hours = it.filter(Char::isDigit).take(2) },
+                        label = { Text("Hours") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        modifier = Modifier.weight(1f)
+                    )
+                    OutlinedTextField(
+                        value = minutes,
+                        onValueChange = {
+                            minutes = it.filter(Char::isDigit).take(2).let { value ->
+                                value.toIntOrNull()?.coerceAtMost(59)?.toString() ?: value
+                            }
+                        },
+                        label = { Text("Minutes") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    listOf(15L, 30L, 60L, 120L).forEach { preset ->
+                        TextButton(
+                            onClick = {
+                                hours = (preset / 60L).toString()
+                                minutes = (preset % 60L).toString()
+                            }
+                        ) {
+                            Text(if (preset < 60L) "${preset}m" else "${preset / 60L}h", color = PlanPurple)
+                        }
+                    }
+                }
                 OutlinedTextField(
                     value = group,
                     onValueChange = { group = it },
