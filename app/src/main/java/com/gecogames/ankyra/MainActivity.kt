@@ -112,6 +112,7 @@ private fun AnkyraApp() {
     }
     var pendingLaunch by remember { mutableStateOf<TimerLaunch?>(null) }
     var permissionMessage by remember { mutableStateOf<String?>(null) }
+    var liveUpdatesEnabled by remember { mutableStateOf(TimerService.canPostLiveUpdates(context)) }
 
     val notificationPermission = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -128,6 +129,7 @@ private fun AnkyraApp() {
     LaunchedEffect(Unit) {
         while (true) {
             snapshot = TimerStore.snapshot(context)
+            liveUpdatesEnabled = TimerService.canPostLiveUpdates(context)
             delay(250L)
         }
     }
@@ -163,7 +165,9 @@ private fun AnkyraApp() {
                     } else {
                         TimerSetupScreen(
                             onStart = { requestLaunch(TimerLaunch(durationMillis = it)) },
-                            message = permissionMessage
+                            message = permissionMessage,
+                            showLiveUpdateSetting = Build.VERSION.SDK_INT >= 36 && !liveUpdatesEnabled,
+                            onEnableLiveUpdates = { TimerService.openLiveUpdateSettings(context) }
                         )
                     }
                 }
@@ -197,7 +201,9 @@ private fun executeTimerLaunch(context: android.content.Context, launch: TimerLa
 @Composable
 private fun TimerSetupScreen(
     onStart: (Long) -> Unit,
-    message: String?
+    message: String?,
+    showLiveUpdateSetting: Boolean,
+    onEnableLiveUpdates: () -> Unit
 ) {
     var hours by remember { mutableIntStateOf(2) }
     var minutes by remember { mutableIntStateOf(0) }
@@ -277,6 +283,17 @@ private fun TimerSetupScreen(
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
             )
+        }
+
+        if (showLiveUpdateSetting) {
+            Button(
+                onClick = onEnableLiveUpdates,
+                colors = ButtonDefaults.buttonColors(containerColor = SurfaceGrey),
+                shape = RoundedCornerShape(24.dp),
+                modifier = Modifier.padding(bottom = 10.dp)
+            ) {
+                Text("Enable lock-screen Live Timer", color = Color.White, fontSize = 13.sp)
+            }
         }
 
         Button(
