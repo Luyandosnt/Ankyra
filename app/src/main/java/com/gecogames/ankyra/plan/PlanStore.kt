@@ -33,13 +33,17 @@ object PlanStore {
         return plan
     }
 
-    fun save(context: Context, plan: PlanDay): PlanDay = synchronized(lock) {
-        val plans = readPlans(context).toMutableList()
-        val normalized = normalize(plan)
-        val index = plans.indexOfFirst { it.date == normalized.date }
-        if (index >= 0) plans[index] = normalized else plans += normalized
-        writePlans(context, plans)
-        normalized
+    fun save(context: Context, plan: PlanDay): PlanDay {
+        val normalized = synchronized(lock) {
+            val plans = readPlans(context).toMutableList()
+            val cleanPlan = normalize(plan)
+            val index = plans.indexOfFirst { it.date == cleanPlan.date }
+            if (index >= 0) plans[index] = cleanPlan else plans += cleanPlan
+            writePlans(context, plans)
+            cleanPlan
+        }
+        PlanScheduler.schedule(context, normalized)
+        return normalized
     }
 
     fun duplicate(context: Context, source: PlanDay, targetDate: LocalDate): PlanDay {
