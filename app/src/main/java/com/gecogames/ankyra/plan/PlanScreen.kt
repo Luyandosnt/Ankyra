@@ -5,6 +5,7 @@ import android.app.TimePickerDialog
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -70,12 +71,14 @@ fun PlanScreen(
     var selectedDate by remember { mutableStateOf(today) }
     var showHistory by remember { mutableStateOf(false) }
     var revision by remember { mutableLongStateOf(PlanStore.revision(context)) }
+    var clockMillis by remember { mutableLongStateOf(System.currentTimeMillis()) }
     var editingCard by remember { mutableStateOf<PlanCard?>(null) }
     var showCardEditor by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         while (true) {
             revision = PlanStore.revision(context)
+            clockMillis = System.currentTimeMillis()
             delay(500L)
         }
     }
@@ -89,18 +92,26 @@ fun PlanScreen(
             .background(PlanBlack)
             .padding(horizontal = 18.dp)
     ) {
-        Row(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 16.dp, bottom = 10.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+                .padding(top = 16.dp, bottom = 10.dp)
         ) {
-            Column {
+            Column(modifier = Modifier.align(Alignment.CenterStart)) {
                 Text("ANKYRA", color = Color.White, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
                 Text(if (showHistory) "Plan history" else "Build your day", color = PlanMuted, fontSize = 12.sp)
             }
-            TextButton(onClick = { showHistory = !showHistory }) {
+            Text(
+                text = formatLiveClock(clockMillis),
+                color = Color.White,
+                fontSize = 21.sp,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.align(Alignment.Center)
+            )
+            TextButton(
+                onClick = { showHistory = !showHistory },
+                modifier = Modifier.align(Alignment.CenterEnd)
+            ) {
                 Text(if (showHistory) "Plan" else "History", color = PlanPurple)
             }
         }
@@ -789,6 +800,10 @@ private fun showDuplicatePicker(
 
 private fun formatMinuteOfDay(value: Int): String =
     "%02d:%02d".format(Locale.getDefault(), value / 60, value % 60)
+
+private fun formatLiveClock(epochMillis: Long): String =
+    java.text.SimpleDateFormat("HH:mm:ss", Locale.getDefault())
+        .format(java.util.Date(epochMillis))
 
 private fun formatClock(epochMillis: Long): String =
     Instant.ofEpochMilli(epochMillis)
