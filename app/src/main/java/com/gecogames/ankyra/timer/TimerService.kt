@@ -144,7 +144,10 @@ class TimerService : Service() {
         }
         TimerStore.finish(this)
         ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
-        stopSelf()
+        val startedNext = current.planDate?.let {
+            startNextPlanCard(this, it, announce = false)
+        } ?: false
+        if (!startedNext) stopSelf()
     }
 
     private fun showForeground(snapshot: TimerSnapshot) {
@@ -181,8 +184,10 @@ class TimerService : Service() {
         // channel, whose importance cannot be raised after the channel is created.
         private const val TIMER_CHANNEL = "ankyra_live_timer_v2"
         private const val FINISHED_CHANNEL = "ankyra_finished_timer"
+        private const val PLAN_START_CHANNEL = "ankyra_plan_start_alarm"
         private const val NOTIFICATION_ID = 4101
         private const val FINISHED_NOTIFICATION_ID = 4102
+        private const val PLAN_START_NOTIFICATION_ID = 4103
         private const val ALARM_REQUEST_CODE = 4201
 
         fun start(
@@ -199,6 +204,27 @@ class TimerService : Service() {
                 .putExtra(EXTRA_PLAN_DATE, planDate)
                 .putExtra(EXTRA_PLAN_CARD_ID, planCardId)
             ContextCompat.startForegroundService(context, intent)
+        }
+
+        fun startNextPlanCard(
+            context: Context,
+            planDate: String,
+            announce: Boolean
+        ): Boolean {
+            val current = TimerStore.snapshot(context)
+            if (current.status == TimerStatus.RUNNING || current.status == TimerStatus.PAUSED) {
+                return false
+            }
+            val card = PlanStore.startNextCard(context, planDate) ?: return false
+            if (announce) announcePlanCardStart(context, card.goal)
+            start(
+                context = context,
+                durationMillis = card.plannedDurationMillis,
+                title = card.goal,
+                planDate = planDate,
+                planCardId = card.id
+            )
+            return true
         }
 
         fun sendAction(context: Context, action: String, addMillis: Long? = null) {
@@ -242,7 +268,6 @@ class TimerService : Service() {
                 actualDurationMillis = snapshot.elapsedMillis
             )
             TimerStore.finish(context)
-            context.stopService(Intent(context, TimerService::class.java))
 
             if (
                 Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
@@ -252,6 +277,44 @@ class TimerService : Service() {
                 NotificationManagerCompat.from(context).notify(
                     FINISHED_NOTIFICATION_ID,
                     buildFinishedNotification(context, snapshot.title)
+                )
+            }
+            vibrate(context)
+            val startedNext = snapshot.planDate?.let {
+                startNextPlanCard(context, it, announce = false)
+            } ?: false
+            if (!startedNext) {
+                context.stopService(Intent(context, TimerService::class.java))
+            }
+        }
+
+        private fun announcePlanCardStart(context: Context, goal: String) {
+            createChannels(context)
+            if (
+                Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+                ActivityCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
+                PackageManager.PERMISSION_GRANTED
+            ) {
+                val openApp = PendingIntent.getActivity(
+                    context,
+                    0,
+                    Intent(context, MainActivity::class.java),
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+                NotificationManagerCompat.from(context).notify(
+                    PLAN_START_NOTIFICATION_ID,
+                    NotificationCompat.Builder(context, PLAN_START_CHANNEL)
+                        .setSmallIcon(R.drawable.ic_timer)
+                        .setColor(Color.rgb(99, 91, 239))
+                        .setContentTitle("Plan card starting now")
+                        .setContentText(goal)
+                        .setContentIntent(openApp)
+                        .setCategory(NotificationCompat.CATEGORY_ALARM)
+                        .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                        .setPriority(NotificationCompat.PRIORITY_HIGH)
+                        .setAutoCancel(true)
+                        .setTimeoutAfter(15_000L)
+                        .build()
                 )
             }
             vibrate(context)
@@ -347,7 +410,7 @@ class TimerService : Service() {
                 .setContentTitle(if (title != null) "Completed: $title" else "Timer complete")
                 .setContentText(
                     if (title != null) {
-                        "Open Ankyra to start the next plan card."
+                        "Ankyra will continue the Plan automatically."
                     } else {
                         "Your Ankyra timer has finished."
                     }
@@ -424,7 +487,25 @@ class TimerService : Service() {
                 )
                 lockscreenVisibility = Notification.VISIBILITY_PUBLIC
             }
-            manager.createNotificationChannels(listOf(timerChannel, finishedChannel))
+            val planStartChannel = NotificationChannel(
+                PLAN_START_CHANNEL,
+                "Plan start alarms",
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = "Rings and vibrates when an Ankyra plan card starts"
+                enableVibration(true)
+                vibrationPattern = longArrayOf(0, 350, 150, 350, 150, 500)
+                setSound(
+                    sound,
+                    AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_ALARM)
+                        .build()
+                )
+                lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+            }
+            manager.createNotificationChannels(
+                listOf(timerChannel, finishedChannel, planStartChannel)
+            )
         }
 
         private fun vibrate(context: Context) {
