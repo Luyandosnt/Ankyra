@@ -19,7 +19,7 @@ object PlanScheduler {
 
         if (
             plan.cards.isEmpty() ||
-            plan.startedAtMillis != null ||
+            plan.cards.any { it.status == PlanCardStatus.ACTIVE } ||
             LocalDate.parse(plan.date).isBefore(LocalDate.now())
         ) return
         val firstPending = plan.scheduledCards().firstOrNull {
