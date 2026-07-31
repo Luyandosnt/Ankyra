@@ -37,6 +37,7 @@ import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -75,6 +76,17 @@ private val Black = Color(0xFF000000)
 private val SurfaceGrey = Color(0xFF2D2D30)
 private val Muted = Color(0xFF929298)
 private val Purple = Color(0xFF635BEF)
+private val AnkyraColors = darkColorScheme(
+    primary = Purple,
+    onPrimary = Color.White,
+    background = Black,
+    onBackground = Color.White,
+    surface = Color(0xFF1B1B1E),
+    onSurface = Color.White,
+    surfaceVariant = SurfaceGrey,
+    onSurfaceVariant = Muted,
+    outline = Color(0xFF85858F)
+)
 
 private enum class AppTab {
     TIMER,
@@ -91,7 +103,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            MaterialTheme {
+            MaterialTheme(colorScheme = AnkyraColors) {
                 Surface(color = Black, modifier = Modifier.fillMaxSize()) {
                     AnkyraApp()
                 }
