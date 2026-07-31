@@ -218,9 +218,10 @@ class TimerService : Service() {
 
         fun openLiveUpdateSettings(context: Context) {
             if (Build.VERSION.SDK_INT < 36) return
-            val intent = Intent(Settings.ACTION_MANAGE_APP_PROMOTED_NOTIFICATIONS)
-                .setData(Uri.parse("package:${context.packageName}"))
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            val intent = Intent("android.settings.MANAGE_APP_PROMOTED_NOTIFICATIONS").apply {
+                data = Uri.parse("package:${context.packageName}")
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
             runCatching { context.startActivity(intent) }.onFailure {
                 context.startActivity(
                     Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
