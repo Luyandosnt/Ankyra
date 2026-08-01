@@ -61,6 +61,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
@@ -471,6 +472,17 @@ private fun PresetButton(label: String, onClick: () -> Unit) {
 private fun RunningTimerScreen(snapshot: TimerSnapshot) {
     val context = LocalContext.current
     val running = snapshot.status == TimerStatus.RUNNING
+    val taskNotes = remember(snapshot.planDate, snapshot.planCardId) {
+        snapshot.planDate?.let { date ->
+            PlanStore.all(context)
+                .firstOrNull { it.date == date }
+                ?.cards
+                ?.firstOrNull { it.id == snapshot.planCardId }
+                ?.notes
+                ?.trim()
+                .orEmpty()
+        }.orEmpty()
+    }
     val ratio = if (snapshot.totalMillis > 0L) {
         snapshot.remainingMillis.toFloat() / snapshot.totalMillis.toFloat()
     } else {
@@ -498,6 +510,35 @@ private fun RunningTimerScreen(snapshot: TimerSnapshot) {
             }
         }
 
+        if (snapshot.isPlanTimer && snapshot.title != null) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(112.dp)
+                    .padding(horizontal = 10.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = snapshot.title,
+                    color = Color.White,
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                if (taskNotes.isNotBlank()) {
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        text = taskNotes,
+                        color = Muted,
+                        fontSize = 14.sp,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+        }
+
         Box(
             modifier = Modifier
                 .weight(1f)
@@ -512,17 +553,6 @@ private fun RunningTimerScreen(snapshot: TimerSnapshot) {
                 strokeWidth = 12.dp
             )
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                if (snapshot.title != null) {
-                    Text(
-                        snapshot.title,
-                        color = Color.White,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(horizontal = 36.dp)
-                    )
-                    Spacer(Modifier.height(12.dp))
-                }
                 Text(
                     TimerService.formatDuration(snapshot.remainingMillis),
                     color = Color.White,
