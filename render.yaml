@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: ankyra-apk
+    runtime: docker
+    plan: free
+    repo: https://github.com/Luyandosnt/Ankyra
+    branch: agent/native-android-timer
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    autoDeployTrigger: commit
+

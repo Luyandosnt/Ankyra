@@ -1,0 +1,25 @@
+server {
+    listen ${PORT};
+    server_name _;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    location = /health {
+        access_log off;
+        default_type text/plain;
+        return 200 "ok\n";
+    }
+
+    location = /Ankyra-debug.apk {
+        try_files /Ankyra-debug.apk =404;
+        default_type application/vnd.android.package-archive;
+        add_header Content-Disposition 'attachment; filename="Ankyra-debug.apk"';
+        add_header Cache-Control "no-cache";
+    }
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
+

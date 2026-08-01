@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#09090b">
+  <title>Download Ankyra</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #09090b;
+      color: #f7f7fb;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background:
+        radial-gradient(circle at 50% 18%, rgba(111, 99, 255, 0.22), transparent 34%),
+        #09090b;
+    }
+
+    main {
+      width: min(100%, 440px);
+      padding: 36px 28px;
+      text-align: center;
+      border: 1px solid #2b2b33;
+      border-radius: 28px;
+      background: rgba(18, 18, 22, 0.92);
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.38);
+    }
+
+    .icon {
+      width: 82px;
+      height: 82px;
+      margin: 0 auto 24px;
+      display: grid;
+      place-items: center;
+      border-radius: 24px;
+      background: linear-gradient(145deg, #8176ff, #5548e8);
+      font-size: 40px;
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      font-size: 34px;
+      letter-spacing: -0.04em;
+    }
+
+    p {
+      margin: 0 auto 28px;
+      color: #aaaab4;
+      line-height: 1.55;
+    }
+
+    .download {
+      min-height: 58px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      border-radius: 18px;
+      background: #6d61f2;
+      color: white;
+      font-size: 18px;
+      font-weight: 750;
+      text-decoration: none;
+      transition: transform 160ms ease, background 160ms ease;
+    }
+
+    .download:hover {
+      background: #7b70ff;
+      transform: translateY(-2px);
+    }
+
+    .meta {
+      margin-top: 22px;
+      font-size: 13px;
+      color: #777783;
+    }
+
+    .checksum {
+      color: #9d96ff;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="icon" aria-hidden="true">⌛</div>
+    <h1>Ankyra Timer + Plan</h1>
+    <p>
+      Build your day from timed cards, execute each block with the native
+      background timer, and keep a history of what you completed.
+    </p>
+    <a class="download" href="/Ankyra-debug.apk" download>
+      Download Android APK
+    </a>
+    <div class="meta">
+      Android 8.0 or newer · Debug build ·
+      <a class="checksum" href="/Ankyra-debug.apk.sha256">SHA-256</a>
+    </div>
+  </main>
+</body>
+</html>
