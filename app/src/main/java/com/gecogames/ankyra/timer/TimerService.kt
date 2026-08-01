@@ -183,7 +183,9 @@ class TimerService : Service() {
         // A new channel ID upgrades existing installations from the old low-importance
         // channel, whose importance cannot be raised after the channel is created.
         private const val TIMER_CHANNEL = "ankyra_live_timer_v2"
-        private const val FINISHED_CHANNEL = "ankyra_finished_timer"
+        // Channel settings are immutable after Android creates them. A new ID ensures
+        // existing installations receive the ringtone and vibration upgrade.
+        private const val FINISHED_CHANNEL = "ankyra_card_transition_alarm_v2"
         private const val PLAN_START_CHANNEL = "ankyra_plan_start_alarm"
         private const val NOTIFICATION_ID = 4101
         private const val FINISHED_NOTIFICATION_ID = 4102
@@ -269,20 +271,23 @@ class TimerService : Service() {
             )
             TimerStore.finish(context)
 
+            val startedNext = snapshot.planDate?.let {
+                startNextPlanCard(context, it, announce = false)
+            } ?: false
+
             if (
                 Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
                 ActivityCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
                 PackageManager.PERMISSION_GRANTED
             ) {
-                NotificationManagerCompat.from(context).notify(
+                val notifications = NotificationManagerCompat.from(context)
+                notifications.cancel(FINISHED_NOTIFICATION_ID)
+                notifications.notify(
                     FINISHED_NOTIFICATION_ID,
-                    buildFinishedNotification(context, snapshot.title)
+                    buildFinishedNotification(context, snapshot.title, startedNext)
                 )
             }
-            vibrate(context)
-            val startedNext = snapshot.planDate?.let {
-                startNextPlanCard(context, it, announce = false)
-            } ?: false
+            vibrateCompletion(context)
             if (!startedNext) {
                 context.stopService(Intent(context, TimerService::class.java))
             }
@@ -398,7 +403,11 @@ class TimerService : Service() {
             return builder.build()
         }
 
-        private fun buildFinishedNotification(context: Context, title: String?): Notification {
+        private fun buildFinishedNotification(
+            context: Context,
+            title: String?,
+            startedNext: Boolean
+        ): Notification {
             val openApp = PendingIntent.getActivity(
                 context,
                 0,
@@ -409,8 +418,10 @@ class TimerService : Service() {
                 .setSmallIcon(R.drawable.ic_timer)
                 .setContentTitle(if (title != null) "Completed: $title" else "Timer complete")
                 .setContentText(
-                    if (title != null) {
-                        "Ankyra will continue the Plan automatically."
+                    if (startedNext) {
+                        "The next Plan card has started automatically."
+                    } else if (title != null) {
+                        "Your Plan is complete."
                     } else {
                         "Your Ankyra timer has finished."
                     }
@@ -419,6 +430,7 @@ class TimerService : Service() {
                 .setCategory(NotificationCompat.CATEGORY_ALARM)
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
                 .setAutoCancel(true)
+                .setTimeoutAfter(15_000L)
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .build()
         }
@@ -473,12 +485,12 @@ class TimerService : Service() {
             val sound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
             val finishedChannel = NotificationChannel(
                 FINISHED_CHANNEL,
-                context.getString(R.string.notification_channel_finished),
+                "Card transition alarms",
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = "Alerts you when an Ankyra timer finishes"
+                description = "Rings and vibrates when a timer card completes and the Plan advances"
                 enableVibration(true)
-                vibrationPattern = longArrayOf(0, 250, 120, 250)
+                vibrationPattern = longArrayOf(0, 450, 150, 450, 150, 700)
                 setSound(
                     sound,
                     AudioAttributes.Builder()
@@ -517,6 +529,21 @@ class TimerService : Service() {
             }
             vibrator.vibrate(
                 VibrationEffect.createWaveform(longArrayOf(0, 250, 120, 250), -1)
+            )
+        }
+
+        private fun vibrateCompletion(context: Context) {
+            val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                context.getSystemService(VibratorManager::class.java).defaultVibrator
+            } else {
+                @Suppress("DEPRECATION")
+                context.getSystemService(Vibrator::class.java)
+            }
+            vibrator.vibrate(
+                VibrationEffect.createWaveform(
+                    longArrayOf(0, 450, 150, 450, 150, 700),
+                    -1
+                )
             )
         }
 
