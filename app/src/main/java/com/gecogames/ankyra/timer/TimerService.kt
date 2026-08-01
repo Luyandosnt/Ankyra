@@ -182,7 +182,7 @@ class TimerService : Service() {
 
         // A new channel ID upgrades existing installations from the old low-importance
         // channel, whose importance cannot be raised after the channel is created.
-        private const val TIMER_CHANNEL = "ankyra_live_timer_v2"
+        private const val TIMER_CHANNEL = "ankyra_live_timer_v3"
         // Channel settings are immutable after Android creates them. A new ID ensures
         // existing installations receive the ringtone and vibration upgrade.
         private const val FINISHED_CHANNEL = "ankyra_card_transition_alarm_v2"
@@ -362,9 +362,9 @@ class TimerService : Service() {
                 .setContentTitle(snapshot.title ?: "Ankyra Timer")
                 .setContentText(
                     if (running) {
-                        "${formatDuration(remaining)} remaining"
+                        formatDuration(remaining)
                     } else {
-                        "${formatDuration(remaining)} remaining · Paused"
+                        "${formatDuration(remaining)} · Paused"
                     }
                 )
                 .setSubText("${formatCompactDuration(snapshot.totalMillis)} · ends ${formatEndTime(endWallClock)}")
@@ -375,7 +375,7 @@ class TimerService : Service() {
                 .setOngoing(true)
                 .setOnlyAlertOnce(true)
                 .setSilent(true)
-                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                .setPriority(NotificationCompat.PRIORITY_MAX)
                 .setRequestPromotedOngoing(true)
                 .setShortCriticalText(formatChipDuration(remaining))
                 .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
@@ -474,10 +474,10 @@ class TimerService : Service() {
 
             val timerChannel = NotificationChannel(
                 TIMER_CHANNEL,
-                "Live timer",
-                NotificationManager.IMPORTANCE_DEFAULT
+                "Priority Live Timer",
+                NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = "Shows Ankyra at the top of notifications and on the lock screen"
+                description = "Requests Ankyra's highest eligible Live Update position"
                 setSound(null, null)
                 enableVibration(false)
                 lockscreenVisibility = Notification.VISIBILITY_PUBLIC
