@@ -134,7 +134,7 @@ private fun AnkyraApp() {
         context.getSharedPreferences("ankyra_onboarding", android.content.Context.MODE_PRIVATE)
     }
     var showOnboarding by remember {
-        mutableStateOf(!onboardingPreferences.getBoolean("notification_setup_complete", false))
+        mutableStateOf(!onboardingPreferences.getBoolean("live_update_setup_v2", false))
     }
     var onboardingPermissionFlow by remember { mutableStateOf(false) }
 
@@ -143,7 +143,7 @@ private fun AnkyraApp() {
     ) { granted ->
         if (onboardingPermissionFlow) {
             onboardingPermissionFlow = false
-            if (granted && Build.VERSION.SDK_INT >= 36 && !TimerService.canPostLiveUpdates(context)) {
+            if (granted && Build.VERSION.SDK_INT >= 36) {
                 TimerService.openLiveUpdateSettings(context)
             } else if (!granted) {
                 permissionMessage = "Notifications are required for Plan alarms and lock-screen timers."
@@ -217,11 +217,12 @@ private fun AnkyraApp() {
         AlertDialog(
             onDismissRequest = {},
             containerColor = Color(0xFF1B1B1E),
-            title = { Text("Enable Ankyra alarms", color = Color.White) },
+            title = { Text("Prioritize Ankyra Live Timer", color = Color.White) },
             text = {
                 Text(
-                    "Ankyra needs notification access for Plan start alarms, vibration, " +
-                        "lock-screen controls and the Live Timer. This setup appears only once.",
+                    "Allow notifications and enable Live Updates so Ankyra can request the " +
+                        "prominent status-bar counter, lock-screen timer and Plan alarms. " +
+                        "This upgrade prompt appears only once.",
                     color = Muted
                 )
             },
@@ -229,7 +230,7 @@ private fun AnkyraApp() {
                 Button(
                     onClick = {
                         onboardingPreferences.edit()
-                            .putBoolean("notification_setup_complete", true)
+                            .putBoolean("live_update_setup_v2", true)
                             .apply()
                         showOnboarding = false
                         if (
@@ -241,10 +242,7 @@ private fun AnkyraApp() {
                         ) {
                             onboardingPermissionFlow = true
                             notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
-                        } else if (
-                            Build.VERSION.SDK_INT >= 36 &&
-                            !TimerService.canPostLiveUpdates(context)
-                        ) {
+                        } else if (Build.VERSION.SDK_INT >= 36) {
                             TimerService.openLiveUpdateSettings(context)
                         }
                     },
