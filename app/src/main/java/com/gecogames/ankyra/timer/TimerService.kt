@@ -16,7 +16,9 @@ import android.media.AudioAttributes
 import android.media.RingtoneManager
 import android.net.Uri
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import android.os.SystemClock
 import android.os.VibrationEffect
 import android.os.Vibrator
@@ -33,6 +35,19 @@ import com.gecogames.ankyra.plan.PlanStore
 import java.util.Locale
 
 class TimerService : Service() {
+
+    private val notificationHandler = Handler(Looper.getMainLooper())
+    private val notificationTicker = object : Runnable {
+        override fun run() {
+            val snapshot = TimerStore.snapshot(this@TimerService)
+            if (snapshot.status != TimerStatus.RUNNING) return
+            getSystemService(NotificationManager::class.java).notify(
+                NOTIFICATION_ID,
+                buildOngoingNotification(this@TimerService, snapshot)
+            )
+            notificationHandler.postDelayed(this, 1_000L)
+        }
+    }
 
     override fun onCreate() {
         super.onCreate()
@@ -124,6 +139,11 @@ class TimerService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
+    override fun onDestroy() {
+        notificationHandler.removeCallbacks(notificationTicker)
+        super.onDestroy()
+    }
+
     private fun finishCurrentPlanCard(skipped: Boolean) {
         cancelAlarm(this)
         val current = TimerStore.snapshot(this)
@@ -162,6 +182,10 @@ class TimerService : Service() {
                 0
             }
         )
+        notificationHandler.removeCallbacks(notificationTicker)
+        if (snapshot.status == TimerStatus.RUNNING) {
+            notificationHandler.postDelayed(notificationTicker, 1_000L)
+        }
     }
 
     companion object {
@@ -361,11 +385,8 @@ class TimerService : Service() {
                 .setColor(Color.rgb(99, 91, 239))
                 .setContentTitle(snapshot.title ?: "Ankyra Timer")
                 .setContentText(
-                    if (running) {
-                        formatDuration(remaining)
-                    } else {
-                        "${formatDuration(remaining)} · Paused"
-                    }
+                    if (running) formatDuration(remaining)
+                    else "${formatDuration(remaining)} · Paused"
                 )
                 .setSubText("${formatCompactDuration(snapshot.totalMillis)} · ends ${formatEndTime(endWallClock)}")
                 .setStyle(progressStyle)
@@ -379,10 +400,8 @@ class TimerService : Service() {
                 .setRequestPromotedOngoing(true)
                 .setShortCriticalText(formatChipDuration(remaining))
                 .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
-                .setShowWhen(running)
-                .setWhen(if (running) endWallClock else System.currentTimeMillis())
-                .setUsesChronometer(running)
-                .setChronometerCountDown(running)
+                .setShowWhen(false)
+                .setUsesChronometer(false)
                 .setProgress(
                     snapshot.totalMillis.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(),
                     (snapshot.totalMillis - remaining).coerceIn(0L, Int.MAX_VALUE.toLong()).toInt(),
