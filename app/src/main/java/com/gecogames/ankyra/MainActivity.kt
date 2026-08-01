@@ -31,6 +31,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Alarm
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Pause
@@ -560,15 +561,19 @@ private fun RunningTimerScreen(snapshot: TimerSnapshot) {
                     fontWeight = FontWeight.Normal
                 )
                 Spacer(Modifier.height(12.dp))
-                if (snapshot.isPlanTimer) {
-                    Text(
-                        "of ${TimerService.formatDuration(snapshot.totalMillis)}",
-                        color = Muted,
-                        fontSize = 16.sp
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        Icons.Default.Alarm,
+                        contentDescription = "Timer finish time",
+                        tint = Muted,
+                        modifier = Modifier.size(18.dp)
                     )
-                } else {
+                    Spacer(Modifier.width(6.dp))
                     Text(
-                        if (running) "Timer running" else "Paused",
+                        if (running) formatTimerFinishTime(snapshot.remainingMillis) else "Paused",
                         color = Muted,
                         fontSize = 16.sp
                     )
@@ -655,6 +660,11 @@ private fun RunningTimerScreen(snapshot: TimerSnapshot) {
         }
     }
 }
+
+private fun formatTimerFinishTime(remainingMillis: Long): String =
+    java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault()).format(
+        java.util.Date(System.currentTimeMillis() + remainingMillis.coerceAtLeast(0L))
+    )
 
 @Composable
 private fun TimerActionButton(
